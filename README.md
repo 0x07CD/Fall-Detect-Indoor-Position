@@ -1,4 +1,4 @@
-# Fall-Detect-Indoor-Position
+# Fall Detection and Patient Surveillance using BLE
 This project was developed with fall detection. And specify the location of patients in the hospital
 
 Wearable Device: คือ อุปกรณ์ที่ใช้สำหรับตรวจจับการหกล้ม และระบุตำแหน่งของผู้สวมใส่ โดยอุปกรณ์นี้มีหน้าที่หลักคือ ทำหน้าที่ปล่อยสัญญาณ Beacon เป็นระยะๆ
