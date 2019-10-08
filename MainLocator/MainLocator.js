@@ -1,1 +1,0 @@
-var noble = require('noble');
