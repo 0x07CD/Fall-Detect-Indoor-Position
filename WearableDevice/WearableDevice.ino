@@ -24,6 +24,7 @@ uint8_t temprature_sens_read();
 BLEAdvertising *pAdvertising;
 struct timeval now;
 
+// setup eddystone beacon
 void setupBeacon() {
   // for test
   char beacon_data[22];
@@ -62,6 +63,7 @@ void setupBeacon() {
   
 }
 
+// M5 for test
 void setup() {
   M5.begin();
   Serial.begin(115200);
