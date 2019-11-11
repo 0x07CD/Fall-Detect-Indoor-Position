@@ -1,14 +1,10 @@
 #include <sys/time.h>
 #include <BLEDevice.h>
 #include <BLEUtils.h>
-#include <esp_sleep.h>
 #include <M5Stack.h>
+#include <utility/MPU9250.h>
 
 #define EDDY_UUID   0xFEAA
-
-#define GPIO_DEEP_SLEEP_DURATION    2             // sleep x seconds and then wake up
-RTC_DATA_ATTR static uint32_t last;               // remember last boot in RTC Memory
-RTC_DATA_ATTR static uint32_t bootcount;          // remember number of boots in RTC Memory
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,9 +16,13 @@ uint8_t temprature_sens_read();
 }
 #endif
 
-// Variable
+// Global Variable
 BLEAdvertising *pAdvertising;
+MPU9250 IMU;
+TaskHandle_t fall_detect_task_handle;
+TaskHandle_t advertise_beacon_task_handle;
 struct timeval now;
+uint32_t bootcount;
 
 // setup eddystone beacon
 void setupBeacon() {
@@ -32,11 +32,11 @@ void setupBeacon() {
 
   // setup eddystone-tlm data
   uint16_t beaconUUID = 0xFEAA;         // Eddystone 16-bit UUID
+  // test value
   uint16_t volt = 3300;                 // 3300mV = 3.3V
   uint16_t temp = (uint16_t)cpuTemp;    // CPU Temp celcius
   uint32_t tmil = now.tv_sec*10;
   
-
   BLEAdvertisementData advertisementData = BLEAdvertisementData();
 
   advertisementData.setFlags(0x06); // GENERAL_DISK_MODE 0x02 | BR_EDR_NOT_SUPPORTED 0x04
@@ -60,40 +60,72 @@ void setupBeacon() {
   advertisementData.setServiceData(BLEUUID(beaconUUID), std::string(beacon_data, 14));
 
   pAdvertising->setScanResponseData(advertisementData);
-  
+}
+
+// Task for Fall-Detection
+void fallDetectTask(void *pvParameters){
+  float total_accel = 0.0f;
+  while(1){
+    if (IMU.readByte(MPU9250_ADDRESS, INT_STATUS) & 0x01)
+    {
+      M5.Lcd.setCursor(0, 10);
+      IMU.readAccelData(IMU.accelCount);
+      IMU.getAres(); // get accelerometer scales saved to "aRes"
+      IMU.ax = (float)IMU.accelCount[0] * IMU.aRes; // - accelBias[0];
+      IMU.ay = (float)IMU.accelCount[1] * IMU.aRes; // - accelBias[1];
+      IMU.az = (float)IMU.accelCount[2] * IMU.aRes; // - accelBias[2];
+      M5.Lcd.print("X-acceleration: ");
+      M5.Lcd.print(1000 * IMU.ax);
+      M5.Lcd.println(" mg ");
+      M5.Lcd.print("Y-acceleration: ");
+      M5.Lcd.print(1000 * IMU.ay);
+      M5.Lcd.println(" mg ");
+      M5.Lcd.print("Z-acceleration: ");
+      M5.Lcd.print(1000 * IMU.az);
+      M5.Lcd.println(" mg ");
+
+      total_accel = sqrt(IMU.ax*IMU.ax + IMU.ay*IMU.ay + IMU.az*IMU.az);
+      M5.Lcd.print("Total acceleration: ");
+      M5.Lcd.print(total_accel);
+      M5.Lcd.println(" mg ");
+    }
+    vTaskDelay(50 / portTICK_PERIOD_MS); // 0.05 milisecond
+  }
+}
+
+// Task for Advertising Beacon 
+void advertiseBeaconTask(void *pvParameters){
+  while (1){
+    bootcount++;
+    gettimeofday(&now, NULL);
+    setupBeacon();
+    pAdvertising->start();
+    Serial.println("Start Advertising Beacon...");
+    vTaskDelay(4000 / portTICK_PERIOD_MS); // for Advertise 4 milisecond
+    pAdvertising->stop();
+    Serial.println("Stop Advertising Beacon...");
+    vTaskDelay(1000 / portTICK_PERIOD_MS); // for break 1 milisecond
+  }
 }
 
 // M5 for test
 void setup() {
   M5.begin();
+  Wire.begin();
+  IMU.initMPU9250();
+  IMU.calibrateMPU9250(IMU.gyroBias, IMU.accelBias);
   Serial.begin(115200);
-
-  gettimeofday(&now, NULL);
-
   M5.Lcd.print("Device Start...\n");
-
-  bootcount++;
-  last = now.tv_sec;
-
   // Create the BLE Device
   BLEDevice::init("Wearable");
-
   // Create the BLE Server
   pAdvertising = BLEDevice::getAdvertising();
 
-  // Setup beacon
-  setupBeacon();
-  // Start Advertising
-  pAdvertising->start();
-  M5.Lcd.print("Advertizing started...\n");
-  delay(100);
-  pAdvertising->stop();
-  M5.Lcd.print("Enter Deep Sleep\n");
-  esp_deep_sleep(1000000LL * GPIO_DEEP_SLEEP_DURATION);
-  M5.Lcd.print("In Deep Sleep\n");
-  M5.update();
+  // Create Task
+  xTaskCreate(fallDetectTask, "Fall-Detection Task", 10000, NULL, 2, &fall_detect_task_handle);
+  xTaskCreate(advertiseBeaconTask, "Advertising Beacon Task", 10000, NULL, 1, &advertise_beacon_task_handle);
 }
 
 void loop() {
-  
+   
 }

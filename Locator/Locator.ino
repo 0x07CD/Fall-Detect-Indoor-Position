@@ -10,7 +10,7 @@
 
 // for Indoor Positioning Service
 #define IPS_SERVICE_UUID        "fa6d99a5-1b0d-417b-8c96-25de8bfc4435"
-#define CHARACTERISTIC_UUID "61207c9a-1a73-40fd-947c-ea1991601d4a"
+#define IPS_CHARACTERISTIC_UUID "61207c9a-1a73-40fd-947c-ea1991601d4a"
 
 const int scanTime = 5; // x seconds
 
@@ -73,14 +73,20 @@ void setup() {
   pServer = BLEDevice::createServer();
 
   // Create the Indoor Positioning Service
+  Serial.println("Create Indoor Positioning Service");
   BLEService *ipsService = pServer->createService(IPS_SERVICE_UUID);
+  Serial.print("Service UUID: ");
+  Serial.println(ipsService->getUUID().toString().c_str());  //** invalid
   pCharacteristic = ipsService->createCharacteristic(
-                      CHARACTERISTIC_UUID,
+                      IPS_CHARACTERISTIC_UUID,
                       BLECharacteristic::PROPERTY_READ   |
-                      // BLECharacteristic::PROPERTY_WRITE  |
+                      BLECharacteristic::PROPERTY_WRITE  |
                       BLECharacteristic::PROPERTY_NOTIFY |
                       BLECharacteristic::PROPERTY_INDICATE
                     );
+                    
+  pCharacteristic->setWriteProperty(false);
+                    
   // Create a BLE Descriptor
   pCharacteristic->addDescriptor(new BLE2902());
 
@@ -89,12 +95,12 @@ void setup() {
   
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(IPS_SERVICE_UUID);
-  pAdvertising->setScanResponse(false);
+  pAdvertising->setScanResponse(true);
   pAdvertising->setMinPreferred(0x00);  // set value to 0x00 to not advertise this parameter
 
   // Start advertising
   BLEDevice::startAdvertising();
-  Serial.println("Waiting a Core Locator connection to notify...");
+  Serial.println("Waiting a Main Locator connection to notify...");
 }
 
 void loop() {
