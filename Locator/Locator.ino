@@ -24,6 +24,9 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     std::string wearable_address = advertisedDevice.getAddress().toString();
     // get rssi of found device
     int wearable_rssi = advertisedDevice.getRSSI();
+    int wearable_txpower = advertisedDevice.getTXPower();
+    // must be float
+    int distance = 0;
 
     // Monitor
     Serial.printf("Advertised Device: %s and RSSI: ", wearable_address.c_str());
@@ -46,12 +49,19 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     wearable_value[4] = wearable_nativeAddress[4];
     wearable_value[5] = wearable_nativeAddress[5];
 
+    /*
     // rssi value
     wearable_value[6] = (uint8_t)wearable_rssi;
     wearable_value[7] = (uint8_t)(wearable_rssi >> 8);
     wearable_value[8] = (uint8_t)(wearable_rssi >> 16);
     wearable_value[9] = (uint8_t)(wearable_rssi >> 24);
-
+    */
+    distance = pow(10, (wearable_txpower - wearable_rssi) / (10 * 2));
+    wearable_value[6] = (uint8_t)distance;
+    wearable_value[7] = (uint8_t)(distance >> 8);
+    wearable_value[8] = (uint8_t)(distance >> 16);
+    wearable_value[9] = (uint8_t)(distance >> 24);
+    
     pCharacteristic->setValue(wearable_value, 10);
     pCharacteristic->notify();
   }
