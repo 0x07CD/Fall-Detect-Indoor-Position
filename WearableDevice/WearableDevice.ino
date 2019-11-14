@@ -91,10 +91,6 @@ void setupBeacon() {
   pAdvertising->setScanResponseData(advertisementData);
 }
 
-void complementaryFilter(){
-  
-}
-
 // Task for Fall-Detection
 void fallDetectTask(void *pvParameters){
   float accelRoll, accelPitch;
