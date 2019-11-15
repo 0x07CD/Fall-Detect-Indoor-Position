@@ -5,7 +5,7 @@
 #include <utility/MPU9250.h>
 
 #define EDDY_UUID   0xFEAA
-#define DELTA_TIME  0.02        // 20 ms sample rate
+#define DELTA_TIME  0.01        // 10 ms sample rate
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,6 +18,7 @@ uint8_t temprature_sens_read();
 #endif
 
 // Prototype-Function
+void appendFile(fs::FS &fs, const char * path, const char * message);
 void setupBeacon();
 void fallDetectTask(void *pvParameters);
 void advertiseBeaconTask(void *pvParameters);
@@ -33,6 +34,7 @@ uint32_t bootcount;
 // M5 for test
 void setup() {
   M5.begin();
+  SD.begin();   // for TF card
   Wire.begin();
   IMU.initMPU9250();
   IMU.initAK8963(IMU.magCalibration);
@@ -55,7 +57,6 @@ void loop() {
 
 // setup eddystone beacon
 void setupBeacon() {
-  // for test
   char beacon_data[22];
   float cpuTemp = (temprature_sens_read() - 32) / 1.8;
 
@@ -93,19 +94,17 @@ void setupBeacon() {
 
 // Task for Fall-Detection
 void fallDetectTask(void *pvParameters){
-  float accelRoll, accelPitch;
-  float roll, pitch;
-  float passRoll, passPitch;
+  float f_ax, f_ay, f_az;
+  float f_gx, f_gy, f_gz;
+  float totalAccel;
   while(1){
-    if (IMU.readByte(MPU9250_ADDRESS, INT_STATUS) & 0x01)
-    {
+    // M5.update();
+    if (IMU.readByte(MPU9250_ADDRESS, INT_STATUS) & 0x01){
       M5.Lcd.setCursor(0, 10);
       IMU.readAccelData(IMU.accelCount);
       IMU.readGyroData(IMU.gyroCount);
-      // IMU.readMagData(IMU.magCount);
       IMU.getAres(); // get accelerometer scales saved to "aRes"
       IMU.getGres(); // get gyroscope scales saved to "gRes"
-      // IMU.getMres(); // get megnetometor scales saved to "mRes"
       
       IMU.ax = (float)IMU.accelCount[0] * IMU.aRes; // - accelBias[0];
       IMU.ay = (float)IMU.accelCount[1] * IMU.aRes; // - accelBias[1];
@@ -114,49 +113,73 @@ void fallDetectTask(void *pvParameters){
       IMU.gx = (float)IMU.gyroCount[0] * IMU.gRes;
       IMU.gy = (float)IMU.gyroCount[1] * IMU.gRes;
       IMU.gz = (float)IMU.gyroCount[2] * IMU.gRes;
-      
-      // IMU.mx = (float)IMU.magCount[0] * IMU.mRes * IMU.magCalibration[0] - IMU.magbias[0];
-      // IMU.my = (float)IMU.magCount[1] * IMU.mRes * IMU.magCalibration[1] - IMU.magbias[1];
-      // IMU.mz = (float)IMU.magCount[2] * IMU.mRes * IMU.magCalibration[2] - IMU.magbias[2];
 
-      accelRoll = (float)(atan2(IMU.ay, IMU.az)) * RAD_TO_DEG;
-      accelPitch = (float)(atan2(-IMU.ax, sqrt(pow(IMU.ay, 2) + pow(IMU.az, 2)))) * RAD_TO_DEG;
+      // accelRoll = (float)(atan2(IMU.ay, IMU.az)) * RAD_TO_DEG;
+      // accelPitch = (float)(atan2(-IMU.ax, sqrt(pow(IMU.ay, 2) + pow(IMU.az, 2)))) * RAD_TO_DEG;
       // magX = IMU.mx * cos(accelPitch) + IMU.mz * sin(accelPitch);
       // magY = IMU.mx * sin(accelRoll) * sin(accelPitch) + IMU.my * cos(accelRoll) - IMU.mz * sin(accelRoll) * cos(accelPitch); 
       // magYaw = (float)(atan2(magY, magX)) * RAD_TO_DEG;
-
-      passRoll = roll;
-      passPitch = pitch;
       
       // Complemetary Filter
-      roll = 0.98 * (roll + IMU.gx * DELTA_TIME) + 0.02 * accelRoll;
-      pitch = 0.98 * (pitch + IMU.gy * DELTA_TIME) + 0.02 * accelPitch;
+      // roll = 0.98 * (roll + IMU.gx * DELTA_TIME) + 0.02 * accelRoll;
+      // pitch = 0.98 * (pitch + IMU.gy * DELTA_TIME) + 0.02 * accelPitch;
       // yaw = 0.98 * (yaw + IMU.gz * DELTA_TIME) + 0.02 * magYaw;
 
-      // for plot graph
-      Serial.print("Roll\t");
-      Serial.print(roll);
-      Serial.print("\tPitch\t");
-      Serial.println(pitch);
-      // Serial.print("\tYaw\t");
-      // Serial.println(yaw);
+      // low pass filter
+      f_ax = IMU.ax * 0.98 + (f_ax * 0.02);
+      f_ay = IMU.ay * 0.98 + (f_ay * 0.02);
+      f_az = IMU.az * 0.98 + (f_az * 0.02);
 
-      M5.Lcd.print("Roll: ");
-      M5.Lcd.println(roll);
-      M5.Lcd.print("Pitch: ");
-      M5.Lcd.println(pitch);
-      // M5.Lcd.print("Yaw: ");
-      // M5.Lcd.println(yaw);
+      // high pass filter
+      f_gx = (f_gx * DELTA_TIME) * 0.98 + (IMU.gx * 0.02);
+      f_gy = (f_gy * DELTA_TIME) * 0.98 + (IMU.gy * 0.02);
+      f_gz = (f_gz * DELTA_TIME) * 0.98 + (IMU.gz * 0.02);
+      
+      /*
+      Serial.print(f_ax);
+      Serial.print("\t");
+      Serial.print(f_ay);
+      Serial.print("\t");
+      Serial.println(f_az);
+      */
 
-      /* Fall Detect
-       *  
-       *  code
-       *  
-       */
+      /*
+      M5.Lcd.println("Accelerometer");
+      M5.Lcd.println(f_ax);
+      M5.Lcd.println(f_ay);
+      M5.Lcd.println(f_az);
+      */
+      
+      /*
+      Serial.print(f_gx);
+      Serial.print("\t");
+      Serial.print(f_gy);
+      Serial.print("\t");
+      Serial.println(f_gz);
+      */
 
+      /*
+      M5.Lcd.println("Gyroscope");
+      M5.Lcd.println(f_gx);
+      M5.Lcd.println(f_gy);
+      M5.Lcd.println(f_gz);
+      */
+      
+      totalAccel = sqrt(f_ax * f_ax + f_ay * f_ay + f_az * f_az);
+      // Serial.println(totalAccel);
+      
+      /*
+      if (totalAccel >= 2){
+        if (){
+          
+        }
+      }
+      */
+      
     }
     vTaskDelay(20 / portTICK_PERIOD_MS); // 0.02 second
   }
+  vTaskSuspend(NULL);
 }
 
 // Task for Advertising Beacon 
@@ -166,10 +189,11 @@ void advertiseBeaconTask(void *pvParameters){
     gettimeofday(&now, NULL);
     setupBeacon();
     pAdvertising->start();
-    // Serial.println("Start Advertising Beacon...");
+    Serial.println("Start Advertising Beacon...");
     vTaskDelay(1000 / portTICK_PERIOD_MS); // for Advertise 1 second
     pAdvertising->stop();
-    // Serial.println("Stop Advertising Beacon...");
+    Serial.println("Stop Advertising Beacon...");
     vTaskDelay(1000 / portTICK_PERIOD_MS); // for break 1 second
   }
+  vTaskSuspend(NULL);
 }
