@@ -18,7 +18,6 @@ uint8_t temprature_sens_read();
 #endif
 
 // Prototype-Function
-void appendFile(fs::FS &fs, const char * path, const char * message);
 void setupBeacon();
 void fallDetectTask(void *pvParameters);
 void advertiseBeaconTask(void *pvParameters);
