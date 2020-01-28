@@ -8,12 +8,11 @@ import {
 	InputGroup,
 	Card
 } from 'react-bootstrap';
-
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 class Login extends Component {
 	state = {
-		hidePassword: false
+		hidePassword: true
 	};
 
 	hidePasswordHandle = () => {
@@ -28,19 +27,19 @@ class Login extends Component {
 					<Card.Body>
 						<Form>
 							<h4 align="center">Patients Surveillance System</h4>
-							<h5 align="center">Login</h5>
+							<h5 align="center">Sign in</h5>
 
 							{/* Email filed */}
-							<Form.Group controlId="email_field">
+							<Form.Group controlId="email_login_field">
 								<Form.Label>Email address</Form.Label>
 								<Form.Control type="email" />
 							</Form.Group>
 
 							{/* Password field */}
-							<Form.Group controlId="password_field">
+							<Form.Group controlId="password_login_field">
 								<Form.Label>Password</Form.Label>
 								<InputGroup>
-									<Form.Control type={!this.state.hidePassword? "password" : "text"} />
+									<Form.Control type={this.state.hidePassword? "password" : "text"} />
 									<InputGroup.Append>
 										{/* Eye icon */}
 										<InputGroup.Text onClick={this.hidePasswordHandle}>
@@ -56,7 +55,7 @@ class Login extends Component {
 
 							<ButtonToolbar className="justify-content-between">
 								{/* SignIn button */}
-								<Button variant="link" type="button">SignIn</Button>
+								<Button variant="link" type="button">Create account</Button>
 
 								{/* Submit button */}
 								<Button variant="primary" type="submit">Next</Button>

@@ -1,10 +1,24 @@
-/* login management */
+/* login page management */
 
 const initialState = {
-	count: 0,
-	items: []
-	/*
-			// structure //
-			items: [{ id: "food1", quantity: 2 }, { id: "food2", quantity: 5 }]
-	*/
+	hidePassword: true,
 };
+
+const loginReducer = (state = initialState, action) => {
+	switch (action.type) {
+		case "HIDE_PASS":
+			return {
+				hidePassword: true
+			};
+		case "SHOW_PASS":
+			return {
+				hidePassword: false
+			};
+		default:
+			return {
+				hidePassword: state.hidePassword
+			};
+	}
+};
+
+export default loginReducer;
