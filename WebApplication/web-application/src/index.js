@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { createStore } from 'redux';
 import { Provider } from 'react-redux';
+import { BrowserRouter as Router } from 'react-router-dom';
 import * as serviceWorker from './serviceWorker';
 import App from './App';
 import reducer from './reducers';
@@ -11,7 +12,9 @@ const store = createStore(reducer);
 
 const MyApp = () => (
 	<Provider store={store}>
-		<App />
+		<Router>
+			<App />
+		</Router>
 	</Provider>
 )
 

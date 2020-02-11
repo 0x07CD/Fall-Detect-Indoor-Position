@@ -1,29 +1,38 @@
-import React, { Component } from 'react';
+import React from 'react';
 import {
-    Navbar,
     Nav,
+    Navbar,
     NavDropdown
 } from 'react-bootstrap';
+import {
+    NavLink
+} from 'react-router-dom';
 
-class Navigation extends Component{
-    render() {
-        return (
-            <Navbar className="justify-content-between" expand="md" fixed="top" bg="dark" variant="dark">
-                <Navbar.Brand>Patients Surveillance System</Navbar.Brand>
+function Navigation() {
+    return (
+        <Navbar expand="md" fixed="top" bg="dark" variant="dark">
+            <NavLink className="navbar-brand" to="/">Patients Surveillance System</NavLink>
+            <Navbar.Toggle aria-controls="collapse-navbar-nav" />
+            <Navbar.Collapse id="collapse-navbar-nav">
                 <Nav className="mr-auto">
-                    <Nav.Link>Home</Nav.Link>
-                    <Nav.Link>Monitor</Nav.Link>
-                    <Nav.Link>Configuration</Nav.Link>
+                    <NavLink className="nav-link" to="/monitoring">
+                        Monitoring
+                    </NavLink>
+                    <NavLink className="nav-link" to="/configuration">
+                        Configuration
+                    </NavLink>
                 </Nav>
                 <Nav className="ml-auto">
-                    <NavDropdown title="User">
-                        <NavDropdown.Item>Manage accont</NavDropdown.Item>
+                    <NavDropdown title="User" drop="left">
+                        <NavLink className="dropdown-item bg-white text-dark" to="/manage_account">
+                            Manage account
+                        </NavLink>
                         <NavDropdown.Item>Sign out</NavDropdown.Item>
                     </NavDropdown>
                 </Nav>
-            </Navbar>
-        );
-    }; 
+            </Navbar.Collapse>
+        </Navbar>
+    );
 }
 
 export default Navigation;
