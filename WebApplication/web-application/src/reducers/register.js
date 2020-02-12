@@ -5,71 +5,61 @@ const initialState = {
     email: {
         value: "",
         errMsg: "",
-        valid: false,
-        invalid: false
+        valid: true
     },
     password: {
         value: "",
         errMsg: "",
-        valid: false,
-        invalid: false
+        valid: true
     },
     confirmPassword: {
         value: "",
         errMsg: "",
-        valid: false,
-        invalid: false
+        valid: true
     },
     firstName: {
         value: "",
         errMsg: "",
-        valid: false,
-        invalid: false
+        valid: true
     },
     lastName: {
         value: "",
         errMsg: "",
-        valid: false,
-        invalid: false
+        valid: true
     }
 };
 
 const registerReducer = (state = initialState, action) => {
     switch (action.type) {
         case "UPDATE_VALUE":
+            const value_temp = { ...state[action.payload.name] }
             return {
                 ...state,
                 [action.payload.name]: {
-                    ...state.action.payload.name,
+                    ...value_temp,
                     value: action.payload.value
                 }
             };
         case "UPDATE_ERR_MSG":
+            const errMsg_temp = { ...state[action.payload.name] }
             return {
                 ...state,
                 [action.payload.name]: {
-                    ...state.action.payload.name,
+                    ...errMsg_temp,
                     errMsg: action.payload.value
                 }
             }
         case "UPDATE_VALID":
+            const valid_temp = { ...state[action.payload.name] }
             return {
                 ...state,
                 [action.payload.name]: {
-                    ...state.action.payload.name,
+                    ...valid_temp,
                     valid: action.payload.value
                 }
-            };
-        case "UPDATE_INVALID":
-            return {
-                ...state,
-                [action.payload.name]: {
-                    ...state.action.payload.name,
-                    invalid: action.payload.value
-                }
-            };
+            }
         default:
-            return initialState
+            return state
     }
 };
 
