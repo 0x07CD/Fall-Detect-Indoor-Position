@@ -26,6 +26,11 @@ const initialState = {
         value: "",
         errMsg: "",
         valid: true
+    },
+    username: {
+        value: "",
+        errMsg: "",
+        valid: true
     }
 };
 

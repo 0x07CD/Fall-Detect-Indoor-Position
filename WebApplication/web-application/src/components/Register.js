@@ -18,93 +18,52 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 function Register(props) {
 	const [hidePassword, setHidePassword] = useState(true);
 
-	const name_pattern = /^[a-zA-Z]+$/;
-	const email_pattern = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-	const password_pattern = /^[A-Za-z]\w{6,20}$/;
+	const firstName_value = props.registerForm.firstName.value;
+	const lastName_value = props.registerForm.lastName.value;
+	const username_value = props.registerForm.username.value;
+	const email_value = props.registerForm.email.value;
+	const password_value = props.registerForm.password.value;
+	const confirmPassword_value = props.registerForm.confirmPassword.value;
 
-	const firstName_form = props.registerForm.firstName.value;
-	const lastName_form = props.registerForm.lastName.value;
-	const email_form = props.registerForm.email.value;
-	const password_form = props.registerForm.password.value;
-	const confirmPassword_form = props.registerForm.confirmPassword.value;
+	const form_data = [
+		props,
+		firstName_value,
+		lastName_value,
+		username_value,
+		email_value,
+		password_value,
+		confirmPassword_value
+	];
 
 	const onChange = (event) => {
+		event.preventDefault();
 		props.updateValue(event.target.name, event.target.value);
 	};
 
-	const onSubmit = () => {
-		// firstname field validate
-		if (firstName_form.length === 0) {
-			props.updateErrMsg("firstName", "enter first name");
-			props.updateValid("firstName", false);
-		} else if (!firstName_form.match(name_pattern)) {
-			props.updateErrMsg("firstName", "first name must be contain only english letter");
-			props.updateValid("firstName", false);
-		} else {
-			props.updateValid("firstName", true);
+	const onSubmit = (event) => {
+		event.preventDefault();
+
+		// validateForm() return false if data invalid 
+		if (!validateForm(...form_data)) {
+			return;
 		}
 
-		// lastname field validate
-		if (lastName_form.length === 0) {
-			props.updateErrMsg("lastName", "enter last name");
-			props.updateValid("lastName", false);
-		} else if (!lastName_form.match(name_pattern)) {
-			props.updateErrMsg("lastName", "last name must be contain only english letter");
-			props.updateValid("lastName", false);
-		} else {
-			props.updateValid("lastName", true);
-		}
-
-		// email field validate
-		if (email_form.length === 0) {
-			props.updateErrMsg("email", "enter email");
-			props.updateValid("email", false);
-		} else if (!email_form.match(email_pattern)) {
-			props.updateErrMsg("email", "email is invald");
-			props.updateValid("email", false);
-		} else {
-			props.updateValid("email", true);
-		}
-
-		// password field validate
-		if (password_form.length === 0) {
-			props.updateErrMsg("password", "enter password");
-			props.updateValid("password", false);
-		} else if (!password_form.match(password_pattern)) {
-			props.updateErrMsg("password", "password must be 6-20 characters and contain a-z, A-Z, 0-9 and first character must be a letter");
-			props.updateValid("password", false);
-		} else {
-			props.updateValid("password", true);
-		}
-
-		// confirm password field validate
-		if (confirmPassword_form.length === 0) {
-			props.updateErrMsg("confirmPassword", "please confirm password");
-			props.updateValid("confirmPassword", false);
-		} else if (password_form !== confirmPassword_form) {
-			props.updateErrMsg("confirmPassword", "those passwords don't match try again");
-			props.updateValid("confirmPassword", false);
-		} else {
-			props.updateValid("confirmPassword", true);
-		}
-		/*
-		firebase.firestore().collection("users").add({
-			firstName: props.registerForm.firstName.value,
-			lastName: props.registerForm.lastName.value,
-			email: props.registerForm.email.value,
-			password: props.registerForm.password.value
-		}).catch(function(error){
+		firebase.firestore().collection("users").doc(username_value).set({
+			firstName: firstName_value,
+			lastName: lastName_value,
+			email: email_value,
+			password: password_value
+		}).catch(function (error) {
 			console.log(error);
 		});
 
-		firebase.auth().createUserWithEmailAndPassword(props.registerForm.email, props.registerForm.password).catch(function(error){
+		firebase.auth().createUserWithEmailAndPassword(
+			email_value, password_value
+		).catch(function (error) {
 			console.log(error.message);
 		});
 
-		return <Redirect to="/login" />
-		*/
-
-		console.log("submit success");
+		props.history.push("/login");
 	};
 
 	return (
@@ -140,10 +99,23 @@ function Register(props) {
 							</Form.Group>
 						</Form.Row>
 
+						{/* username filed */}
+						<Form.Group controlId="username_reg_field">
+							<Form.Label>Username</Form.Label>
+							<Form.Control type="text" name="username" onChange={onChange} isInvalid={!props.registerForm.username.valid} />
+							<Form.Text className={props.registerForm.username.valid ? "text-muted" : "text-danger"}>
+								{
+									props.registerForm.username.valid ?
+										"" :
+										props.registerForm.username.errMsg
+								}
+							</Form.Text>
+						</Form.Group>
+
 						{/* Email filed */}
 						<Form.Group controlId="email_reg_field">
 							<Form.Label>Email</Form.Label>
-							<Form.Control type="text" name="email" isInvalid={!props.registerForm.email.valid} />
+							<Form.Control type="text" name="email" onChange={onChange} isInvalid={!props.registerForm.email.valid} />
 							<Form.Text className={props.registerForm.email.valid ? "text-muted" : "text-danger"}>
 								{
 									props.registerForm.email.valid ?
@@ -157,11 +129,11 @@ function Register(props) {
 							{/* Password filed */}
 							<Form.Group as={Col} controlId="password_reg_field">
 								<Form.Label>Password</Form.Label>
-								<Form.Control type={hidePassword ? "password" : "text"} name="password" isInvalid={!props.registerForm.password.valid} />
+								<Form.Control type={hidePassword ? "password" : "text"} name="password" onChange={onChange} isInvalid={!props.registerForm.password.valid} />
 								<Form.Text className={props.registerForm.password.valid ? "text-muted" : "text-danger"}>
 									{
 										props.registerForm.password.valid ?
-											"use 6-20 characters and contain a-z, A-Z, 0-9 and first character must be a letter" :
+											"use 6-20 characters with contain alphanumeric, dot, underscore which first and last character must be an alphanumeric" :
 											props.registerForm.password.errMsg
 									}
 								</Form.Text>
@@ -171,7 +143,7 @@ function Register(props) {
 							<Form.Group as={Col} controlId="confirm_reg_field">
 								<Form.Label>Confirm password</Form.Label>
 								<InputGroup>
-									<Form.Control type={hidePassword ? "password" : "text"} name="confirmPassword" isInvalid={!props.registerForm.confirmPassword.valid} />
+									<Form.Control type={hidePassword ? "password" : "text"} name="confirmPassword" onChange={onChange} isInvalid={!props.registerForm.confirmPassword.valid} />
 									<InputGroup.Append>
 										{/* Eye icon */}
 										<InputGroup.Text variant="light" onClick={() => setHidePassword(!hidePassword)}>
@@ -205,6 +177,111 @@ function Register(props) {
 			</Card>
 		</Container>
 	);
+}
+
+function validateInput(inputType, inputData) {
+	const name_pattern = /^[a-zA-Z]{1,20}$/;
+	const username_pattern = /^[a-zA-Z0-9](_(?!(\.|_))|\.(?!(_|\.))|[a-zA-Z0-9]){4,18}[a-zA-Z0-9]$/;
+	const email_pattern = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+	const password_pattern = /^[a-zA-Z0-9](_(?!(\.|_))|\.(?!(_|\.))|[a-zA-Z0-9]){4,18}$/;
+
+	switch (inputType) {
+		case "name":
+			return name_pattern.test(inputData);
+		case "username":
+			return username_pattern.test(inputData);
+		case "email":
+			return email_pattern.test(inputData);
+		case "password":
+			return password_pattern.test(inputData);
+		default:
+			console.log("input type don't exist...");
+			return false;
+	}
+}
+
+function validateForm(props, firstName, lastName, username, email, password, confirmPassword) {
+	let errors = true;
+
+	// firstname field validate
+	if (firstName.length === 0) {
+		props.updateErrMsg("firstName", "enter first name");
+		props.updateValid("firstName", false);
+		errors = false;
+	} else if (!validateInput("name", firstName)) {
+		props.updateErrMsg("firstName", "first name must be contain only english letter");
+		props.updateValid("firstName", false);
+		errors = false;
+	} else {
+		props.updateValid("firstName", true);
+	}
+
+	// lastname field validate
+	if (lastName.length === 0) {
+		props.updateErrMsg("lastName", "enter last name");
+		props.updateValid("lastName", false);
+		errors = false;
+	} else if (!validateInput("name", lastName)) {
+		props.updateErrMsg("lastName", "last name must be contain only english letter");
+		props.updateValid("lastName", false);
+		errors = false;
+	} else {
+		props.updateValid("lastName", true);
+	}
+
+	// username field validate
+	if (username.length === 0) {
+		props.updateErrMsg("username", "enter username");
+		props.updateValid("username", false);
+		errors = false;
+	} else if (!validateInput("username", username)) {
+		props.updateErrMsg("username", "username must be 6-20 characters with contain alphanumeric, dot, underscore which first and last character must be an alphanumeric");
+		props.updateValid("username", false);
+		errors = false;
+	} else {
+		props.updateValid("username", true);
+	}
+
+	// email field validate
+	if (email.length === 0) {
+		props.updateErrMsg("email", "enter email");
+		props.updateValid("email", false);
+		errors = false;
+	} else if (!validateInput("email", email)) {
+		props.updateErrMsg("email", "email is invald");
+		props.updateValid("email", false);
+		errors = false;
+	} else {
+		props.updateValid("email", true);
+	}
+
+	// password field validate
+	if (password.length === 0) {
+		props.updateErrMsg("password", "enter password");
+		props.updateValid("password", false);
+		errors = false;
+	} else if (!validateInput("password", password)) {
+		props.updateErrMsg("password", "password must be 6-20 characters with contain alphanumeric, dot, underscore which first character must be an alphanumeric");
+		props.updateValid("password", false);
+		errors = false;
+	} else {
+		props.updateValid("password", true);
+	}
+
+	// confirm password field validate
+	if (confirmPassword.length === 0 && password.length > 0) {
+		props.updateErrMsg("confirmPassword", "please confirm password");
+		props.updateValid("confirmPassword", false);
+		errors = false;
+	} else if (password !== confirmPassword) {
+		props.updateErrMsg("confirmPassword", "those passwords don't match try again");
+		props.updateValid("confirmPassword", false);
+		errors = false;
+	} else {
+		props.updateValid("confirmPassword", true);
+	}
+
+	return errors;
 }
 
 const mapStateToProps = state => {

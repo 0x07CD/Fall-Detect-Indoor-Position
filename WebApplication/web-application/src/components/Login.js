@@ -25,9 +25,9 @@ function Login() {
 						<h5 align="center">Sign in</h5>
 
 						{/* Email filed */}
-						<Form.Group controlId="email_login_field">
-							<Form.Label>Email address</Form.Label>
-							<Form.Control type="email" />
+						<Form.Group controlId="username_login_field">
+							<Form.Label>Username</Form.Label>
+							<Form.Control type="text" />
 						</Form.Group>
 
 						{/* Password field */}

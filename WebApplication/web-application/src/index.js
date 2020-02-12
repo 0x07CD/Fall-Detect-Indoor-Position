@@ -1,20 +1,25 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { createStore } from 'redux';
+
 import { Provider } from 'react-redux';
 import { BrowserRouter as Router } from 'react-router-dom';
-import * as serviceWorker from './serviceWorker';
-import App from './App';
-import reducer from './reducers';
+// import { PersistGate } from 'redux-persist/integration/react';
 
-const store = createStore(reducer);
+import App from './App';
+import configureStore from './configureStore';
+import * as serviceWorker from './serviceWorker';
+
+const /*{*/ store/*, persistor }*/ = configureStore();
 
 const MyApp = () => (
 	<Provider store={store}>
-		<Router>
-			<App />
-		</Router>
+		{/* <PersistGate loading={null} persistor={persistor}> */}
+			<Router>
+				<App />
+			</Router>
+		{/* </PersistGate> */}
 	</Provider>
 )
 
