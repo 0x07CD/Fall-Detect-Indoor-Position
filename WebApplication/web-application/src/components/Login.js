@@ -1,8 +1,4 @@
 import React, { useState } from 'react';
-// import firebase from '../firebase';
-import {
-	Link
-} from 'react-router-dom';
 import {
 	Container,
 	Form,
@@ -11,20 +7,21 @@ import {
 	InputGroup,
 	Card
 } from 'react-bootstrap';
+import firebase from '../firebase';
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function Login() {
 	const [hidePassword, setHidePassword] = useState(true);
 
 	return (
-		<Container style={{ paddingTop: '70px' } /*for prevent overlap others content from navigation bar*/}>
+		<Container style={{ paddingTop: '70px', maxWidth: '600px' } /*padding for prevent overlap others content from navigation bar*/}>
 			<Card>
 				<Card.Body>
 					<Form>
 						<h4 align="center">Patients Surveillance System</h4>
 						<h5 align="center">Sign in</h5>
 
-						{/* Email filed */}
+						{/* Username filed */}
 						<Form.Group controlId="username_login_field">
 							<Form.Label>Username</Form.Label>
 							<Form.Control type="text" />
@@ -50,7 +47,7 @@ function Login() {
 
 						<ButtonToolbar className="justify-content-between">
 							{/* SignIn button */}
-							<Link to="/register">Create account</Link>
+							<Button variant="link "href="/register">Create account</Button>
 
 							{/* Submit button */}
 							<Button variant="primary" type="submit">Next</Button>

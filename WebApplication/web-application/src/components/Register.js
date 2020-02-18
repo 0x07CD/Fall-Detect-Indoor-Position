@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
 import { connect } from 'react-redux';
+import { useHistory } from 'react-router-dom';
 import {
-	Redirect
-} from 'react-router-dom';
-import {
-	Container,
 	Col,
+	Card,
 	Form,
 	Button,
-	ButtonToolbar,
+	Spinner,
+	Container,
 	InputGroup,
-	Card
+	ButtonToolbar
 } from 'react-bootstrap';
 import firebase from '../firebase';
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function Register(props) {
 	const [hidePassword, setHidePassword] = useState(true);
+	const [isLoading, setIsLoading] = useState(false);
+	const history = useHistory();
 
 	const firstName_value = props.registerForm.firstName.value;
 	const lastName_value = props.registerForm.lastName.value;
@@ -48,26 +49,66 @@ function Register(props) {
 			return;
 		}
 
-		firebase.firestore().collection("users").doc(username_value).set({
-			firstName: firstName_value,
-			lastName: lastName_value,
-			email: email_value,
-			password: password_value
-		}).catch(function (error) {
-			console.log(error);
-		});
+		// for disable input field and animate loading
+		setIsLoading(true);
 
+		// register with firebase auth api
 		firebase.auth().createUserWithEmailAndPassword(
 			email_value, password_value
-		).catch(function (error) {
-			console.log(error.message);
-		});
+		).then(function () {
+			// for add user information to database
+			firebase.auth().signInWithEmailAndPassword(
+				email_value, password_value
+			).then(function () {
+				console.log("retrieve data");
+				firebase.firestore().collection("users").where(username_value, "==", true).get().then(function (snapshot) {
+					snapshot.forEach(function (doc) {
+						if (doc.id === username_value) {
+							props.updateErrMsg("username", "username is already in use");
+							setIsLoading(false);
+							return null;
+						}
+					});
 
-		props.history.push("/login");
+					console.log("setting data");
+					firebase.firestore().collection("users").doc(username_value).set({
+						firstName: firstName_value,
+						lastName: lastName_value,
+						email: email_value,
+						password: password_value
+					}).then(function () {
+						// is ok
+						firebase.auth().signOut().then(function () {
+							console.log("success");
+						}).catch(function (error) {
+							console.log("Error signing out: ", error.message);
+						});
+						setIsLoading(false);
+						history.push("/login");
+					}).catch(function (error) {
+						// add operation error
+						setIsLoading(false);
+						console.log("Error setting documents: ", error);
+					});
+				}).catch(function (error) {
+					setIsLoading(false);
+					console.log("Error getting documents: ", error);
+				});
+			}).catch(function (error) {
+				// sign in operation error
+				setIsLoading(false);
+				console.log("Error signing in: ", error.message);
+			});
+		}).catch(function (error) {
+			// create user error
+			setIsLoading(false);
+			props.updateErrMsg("Error creating account: ", error.massage);
+		});
 	};
 
+	// JSX
 	return (
-		<Container style={{ paddingTop: '70px' } /*for prevent overlap others content from navigation bar*/}>
+		<Container style={{ paddingTop: '70px', maxWidth: '600px' } /*padding for prevent overlap others content from navigation bar*/}>
 			<Card>
 				<Card.Body>
 					<Form onSubmit={onSubmit}>
@@ -78,7 +119,13 @@ function Register(props) {
 							{/* Name filed */}
 							<Form.Group as={Col} controlId="firstName_field">
 								<Form.Label>First Name</Form.Label>
-								<Form.Control type="text" name="firstName" onChange={onChange} isInvalid={!props.registerForm.firstName.valid} />
+								<Form.Control
+									type="text"
+									name="firstName"
+									onChange={onChange}
+									disabled={isLoading}
+									isInvalid={!props.registerForm.firstName.valid}
+								/>
 								<Form.Text className={props.registerForm.firstName.valid ? "text-muted" : "text-danger"}>
 									{
 										props.registerForm.firstName.valid ?
@@ -89,7 +136,13 @@ function Register(props) {
 
 							<Form.Group as={Col} controlId="lastName_field">
 								<Form.Label>Last Name</Form.Label>
-								<Form.Control type="text" name="lastName" onChange={onChange} isInvalid={!props.registerForm.lastName.valid} />
+								<Form.Control
+									type="text"
+									name="lastName"
+									onChange={onChange}
+									disabled={isLoading}
+									isInvalid={!props.registerForm.lastName.valid}
+								/>
 								<Form.Text className={props.registerForm.lastName.valid ? "text-muted" : "text-danger"}>
 									{
 										props.registerForm.lastName.valid ?
@@ -102,7 +155,13 @@ function Register(props) {
 						{/* username filed */}
 						<Form.Group controlId="username_reg_field">
 							<Form.Label>Username</Form.Label>
-							<Form.Control type="text" name="username" onChange={onChange} isInvalid={!props.registerForm.username.valid} />
+							<Form.Control
+								type="text"
+								name="username"
+								onChange={onChange}
+								disabled={isLoading}
+								isInvalid={!props.registerForm.username.valid}
+							/>
 							<Form.Text className={props.registerForm.username.valid ? "text-muted" : "text-danger"}>
 								{
 									props.registerForm.username.valid ?
@@ -115,7 +174,13 @@ function Register(props) {
 						{/* Email filed */}
 						<Form.Group controlId="email_reg_field">
 							<Form.Label>Email</Form.Label>
-							<Form.Control type="text" name="email" onChange={onChange} isInvalid={!props.registerForm.email.valid} />
+							<Form.Control
+								type="text"
+								name="email"
+								onChange={onChange}
+								disabled={isLoading}
+								isInvalid={!props.registerForm.email.valid}
+							/>
 							<Form.Text className={props.registerForm.email.valid ? "text-muted" : "text-danger"}>
 								{
 									props.registerForm.email.valid ?
@@ -129,7 +194,13 @@ function Register(props) {
 							{/* Password filed */}
 							<Form.Group as={Col} controlId="password_reg_field">
 								<Form.Label>Password</Form.Label>
-								<Form.Control type={hidePassword ? "password" : "text"} name="password" onChange={onChange} isInvalid={!props.registerForm.password.valid} />
+								<Form.Control
+									type={hidePassword ? "password" : "text"}
+									name="password"
+									onChange={onChange}
+									disabled={isLoading}
+									isInvalid={!props.registerForm.password.valid}
+								/>
 								<Form.Text className={props.registerForm.password.valid ? "text-muted" : "text-danger"}>
 									{
 										props.registerForm.password.valid ?
@@ -143,7 +214,13 @@ function Register(props) {
 							<Form.Group as={Col} controlId="confirm_reg_field">
 								<Form.Label>Confirm password</Form.Label>
 								<InputGroup>
-									<Form.Control type={hidePassword ? "password" : "text"} name="confirmPassword" onChange={onChange} isInvalid={!props.registerForm.confirmPassword.valid} />
+									<Form.Control
+										type={hidePassword ? "password" : "text"}
+										name="confirmPassword"
+										onChange={onChange}
+										disabled={isLoading}
+										isInvalid={!props.registerForm.confirmPassword.valid}
+									/>
 									<InputGroup.Append>
 										{/* Eye icon */}
 										<InputGroup.Text variant="light" onClick={() => setHidePassword(!hidePassword)}>
@@ -167,10 +244,21 @@ function Register(props) {
 
 						<ButtonToolbar className="justify-content-between">
 							{/* Sign In link */}
-							<Button href="/login" variant="link">Sign in instead</Button>
+							<Button href="/login" variant="link" disabled={isLoading}>Sign in instead</Button>
 
-							{/* Submit button */}
-							<Button variant="primary" type="submit">Next</Button>
+							<Form.Group>
+								{/* Submit button */}
+								<Button variant="primary" type="submit" disabled={isLoading}>
+									{
+										isLoading ?
+											<Spinner animation="border" role="status">
+												<span className="sr-only">Loading...</span>
+											</Spinner> :
+											"Next"
+									}
+								</Button>
+							</Form.Group>
+
 						</ButtonToolbar>
 					</Form>
 				</Card.Body>
@@ -204,7 +292,7 @@ function validateForm(props, firstName, lastName, username, email, password, con
 	let errors = true;
 
 	// firstname field validate
-	if (firstName.length === 0) {
+	if (firstName.length === 0 || !firstName) {
 		props.updateErrMsg("firstName", "enter first name");
 		props.updateValid("firstName", false);
 		errors = false;
@@ -217,7 +305,7 @@ function validateForm(props, firstName, lastName, username, email, password, con
 	}
 
 	// lastname field validate
-	if (lastName.length === 0) {
+	if (lastName.length === 0 || !lastName) {
 		props.updateErrMsg("lastName", "enter last name");
 		props.updateValid("lastName", false);
 		errors = false;
@@ -230,7 +318,7 @@ function validateForm(props, firstName, lastName, username, email, password, con
 	}
 
 	// username field validate
-	if (username.length === 0) {
+	if (username.length === 0 || !username) {
 		props.updateErrMsg("username", "enter username");
 		props.updateValid("username", false);
 		errors = false;
@@ -243,7 +331,7 @@ function validateForm(props, firstName, lastName, username, email, password, con
 	}
 
 	// email field validate
-	if (email.length === 0) {
+	if (email.length === 0 || !email) {
 		props.updateErrMsg("email", "enter email");
 		props.updateValid("email", false);
 		errors = false;
@@ -256,7 +344,7 @@ function validateForm(props, firstName, lastName, username, email, password, con
 	}
 
 	// password field validate
-	if (password.length === 0) {
+	if (password.length === 0 || !password) {
 		props.updateErrMsg("password", "enter password");
 		props.updateValid("password", false);
 		errors = false;
@@ -269,7 +357,7 @@ function validateForm(props, firstName, lastName, username, email, password, con
 	}
 
 	// confirm password field validate
-	if (confirmPassword.length === 0 && password.length > 0) {
+	if ((confirmPassword.length === 0 || !confirmPassword) && password.length > 0) {
 		props.updateErrMsg("confirmPassword", "please confirm password");
 		props.updateValid("confirmPassword", false);
 		errors = false;
