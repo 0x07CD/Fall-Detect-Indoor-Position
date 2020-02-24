@@ -5,9 +5,9 @@ import {
 	Switch,
 	useLocation
 } from 'react-router-dom';
-import Login from './components/Login';
+import SignIn from './components/SignIn';
 import NoMatch from './components/NoMatch';
-import Register from './components/Register';
+import CreateUser from './components/CreateUser';
 import Navigation from './components/Navigation';
 import Monitoring from './components/Monitoring';
 import Configuration from './components/Configuration';
@@ -16,7 +16,7 @@ import ManageAccount from './components/ManageAccount';
 function App() {
 	let location = useLocation();
 	let correct_path_include_navigation = /^\/(manage_account|configuration|monitoring)?$/;
-	// let correct_path_exclude_navigation = /^\/(register|login)/;
+	// let correct_path_exclude_navigation = /^\/(create_user|sign_in)/;
 	return (
 		<Container>
 			{
@@ -33,11 +33,11 @@ function App() {
 				<Route path="/monitoring">
 					<Monitoring />
 				</Route>
-				<Route path="/register">
-					<Register />
+				<Route path="/create_user">
+					<CreateUser />
 				</Route>
-				<Route path="/login">
-					<Login />
+				<Route path="/sign_in">
+					<SignIn />
 				</Route>
 				<Route exact path="/">
 					<Monitoring />

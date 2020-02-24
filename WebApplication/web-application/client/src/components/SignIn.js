@@ -9,7 +9,7 @@ import {
 } from 'react-bootstrap';
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
-function Login() {
+function SignIn() {
 	const [hidePassword, setHidePassword] = useState(true);
 
 	return (
@@ -21,13 +21,13 @@ function Login() {
 						<h5 align="center">Sign in</h5>
 
 						{/* Username filed */}
-						<Form.Group controlId="username_login_field">
-							<Form.Label>Username</Form.Label>
+						<Form.Group controlId="email_field">
+							<Form.Label>Email</Form.Label>
 							<Form.Control type="text" />
 						</Form.Group>
 
 						{/* Password field */}
-						<Form.Group controlId="password_login_field">
+						<Form.Group controlId="password_field">
 							<Form.Label>Password</Form.Label>
 							<InputGroup>
 								<Form.Control type={hidePassword ? "password" : "text"} />
@@ -46,7 +46,7 @@ function Login() {
 
 						<ButtonToolbar className="justify-content-between">
 							{/* SignIn button */}
-							<Button variant="link "href="/register">Create account</Button>
+							<Button variant="link "href="/create_user">Create account</Button>
 
 							{/* Submit button */}
 							<Button variant="primary" type="submit">Next</Button>
@@ -58,4 +58,4 @@ function Login() {
 	);
 }
 
-export default Login;
+export default SignIn;

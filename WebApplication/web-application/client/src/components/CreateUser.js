@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
+import axios from 'axios';
 import { useHistory } from 'react-router-dom';
 import {
 	Col,
@@ -11,17 +12,17 @@ import {
 	InputGroup,
 	ButtonToolbar
 } from 'react-bootstrap';
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
-function Register(props) {
+function CreateUser(props) {
 	const [hidePassword, setHidePassword] = useState(true);
 	const [isLoading, setIsLoading] = useState(false);
 	const history = useHistory();
 
-	const username_value = props.registerForm.username.value;
-	const email_value = props.registerForm.email.value;
-	const password_value = props.registerForm.password.value;
-	const confirmPassword_value = props.registerForm.confirmPassword.value;
+	const username_value = props.createUserForm.username.value;
+	const email_value = props.createUserForm.email.value;
+	const password_value = props.createUserForm.password.value;
+	const confirmPassword_value = props.createUserForm.confirmPassword.value;
 
 	const form_data = [
 		props,
@@ -30,6 +31,10 @@ function Register(props) {
 		password_value,
 		confirmPassword_value
 	];
+
+	useEffect(() => {
+		
+	});
 
 	const onChange = (event) => {
 		event.preventDefault();
@@ -41,11 +46,24 @@ function Register(props) {
 
 		// validateForm() return false if data invalid 
 		if (!validateForm(...form_data)) {
-			return;
+			return null;
 		}
 
 		// for disable input field and animate loading
 		setIsLoading(true);
+
+		const body = {
+			username: username_value,
+			email: email_value,
+			password: password_value
+		};
+
+		axios.post("https://us-central1-ce62-29.cloudfunctions.net/createUser", body).then((res) => {
+			console.log(res.data);
+		});
+
+		setIsLoading(false);
+		history.push("sign_in");
 	};
 
 	// JSX
@@ -65,13 +83,13 @@ function Register(props) {
 								name="username"
 								onChange={onChange}
 								disabled={isLoading}
-								isInvalid={!props.registerForm.username.valid}
+								isInvalid={!props.createUserForm.username.valid}
 							/>
-							<Form.Text className={props.registerForm.username.valid ? "text-muted" : "text-danger"}>
+							<Form.Text className={props.createUserForm.username.valid ? "text-muted" : "text-danger"}>
 								{
-									props.registerForm.username.valid ?
+									props.createUserForm.username.valid ?
 										"" :
-										props.registerForm.username.errMsg
+										props.createUserForm.username.errMsg
 								}
 							</Form.Text>
 						</Form.Group>
@@ -84,13 +102,13 @@ function Register(props) {
 								name="email"
 								onChange={onChange}
 								disabled={isLoading}
-								isInvalid={!props.registerForm.email.valid}
+								isInvalid={!props.createUserForm.email.valid}
 							/>
-							<Form.Text className={props.registerForm.email.valid ? "text-muted" : "text-danger"}>
+							<Form.Text className={props.createUserForm.email.valid ? "text-muted" : "text-danger"}>
 								{
-									props.registerForm.email.valid ?
-										"example@email.com" :
-										props.registerForm.email.errMsg
+									props.createUserForm.email.valid ?
+										"" :
+										props.createUserForm.email.errMsg
 								}
 							</Form.Text>
 						</Form.Group>
@@ -104,13 +122,13 @@ function Register(props) {
 									name="password"
 									onChange={onChange}
 									disabled={isLoading}
-									isInvalid={!props.registerForm.password.valid}
+									isInvalid={!props.createUserForm.password.valid}
 								/>
-								<Form.Text className={props.registerForm.password.valid ? "text-muted" : "text-danger"}>
+								<Form.Text className={props.createUserForm.password.valid ? "text-muted" : "text-danger"}>
 									{
-										props.registerForm.password.valid ?
-											"use 6-20 characters with contain alphanumeric, dot, underscore which first and last character must be an alphanumeric" :
-											props.registerForm.password.errMsg
+										props.createUserForm.password.valid ?
+											"" :
+											props.createUserForm.password.errMsg
 									}
 								</Form.Text>
 							</Form.Group>
@@ -124,7 +142,7 @@ function Register(props) {
 										name="confirmPassword"
 										onChange={onChange}
 										disabled={isLoading}
-										isInvalid={!props.registerForm.confirmPassword.valid}
+										isInvalid={!props.createUserForm.confirmPassword.valid}
 									/>
 									<InputGroup.Append>
 										{/* Eye icon */}
@@ -137,11 +155,11 @@ function Register(props) {
 										</InputGroup.Text>
 									</InputGroup.Append>
 								</InputGroup>
-								<Form.Text className={props.registerForm.confirmPassword.valid ? "text-muted" : "text-danger"}>
+								<Form.Text className={props.createUserForm.confirmPassword.valid ? "text-muted" : "text-danger"}>
 									{
-										props.registerForm.confirmPassword.valid ?
+										props.createUserForm.confirmPassword.valid ?
 											"" :
-											props.registerForm.confirmPassword.errMsg
+											props.createUserForm.confirmPassword.errMsg
 									}
 								</Form.Text>
 							</Form.Group>
@@ -149,7 +167,7 @@ function Register(props) {
 
 						<ButtonToolbar className="justify-content-between">
 							{/* Sign In link */}
-							<Button href="/login" variant="link" disabled={isLoading}>Sign in instead</Button>
+							<Button variant="link" href="/sign_in" disabled={isLoading}>Sign in instead</Button>
 
 							<Form.Group>
 								{/* Submit button */}
@@ -250,7 +268,7 @@ function validateForm(props, username, email, password, confirmPassword) {
 
 const mapStateToProps = state => {
 	return {
-		registerForm: state.registerReducer
+		createUserForm: state.createUserReducer
 	};
 };
 
@@ -268,4 +286,4 @@ const mapDispatchToProps = dispatch => {
 	};
 };
 
-export default connect(mapStateToProps, mapDispatchToProps)(Register);
+export default connect(mapStateToProps, mapDispatchToProps)(CreateUser);

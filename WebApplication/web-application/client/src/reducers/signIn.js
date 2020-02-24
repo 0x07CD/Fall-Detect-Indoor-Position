@@ -1,10 +1,10 @@
-/* login page management */
+/* sign in page management */
 
 const initialState = {
 	hidePassword: true,
 };
 
-const loginReducer = (state = initialState, action) => {
+const signInReducer = (state = initialState, action) => {
 	switch (action.type) {
 		case "HIDE_PASS":
 			return {
@@ -21,4 +21,4 @@ const loginReducer = (state = initialState, action) => {
 	}
 };
 
-export default loginReducer;
+export default signInReducer;

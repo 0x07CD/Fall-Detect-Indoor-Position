@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export function registerAction(){
+export function createUserAction(){
     return (dispatch) => {
         axios.get("").then(() => {
             dispatch({

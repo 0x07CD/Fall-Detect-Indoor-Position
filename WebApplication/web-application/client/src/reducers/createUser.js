@@ -1,4 +1,4 @@
-/* register form management */
+/* createUser form management */
 
 const initialState = {
     email: {
@@ -33,7 +33,7 @@ const initialState = {
     }
 };
 
-const registerReducer = (state = initialState, action) => {
+const createUserReducer = (state = initialState, action) => {
     /* data structure
     action = {
         type: "UPDATE_VALUE" or "UPDATE_ERR_MSG" or "UPDATE_VALID",
@@ -76,4 +76,4 @@ const registerReducer = (state = initialState, action) => {
     }
 };
 
-export default registerReducer;
+export default createUserReducer;

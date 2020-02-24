@@ -10,10 +10,10 @@
     "predeploy": [
       "npm --prefix \"$RESOURCE_DIR\" run lint"
     ],
-    "source": "functions"
+    "source": "server"
   },
   "hosting": {
-    "public": "build",
+    "public": "client/build",
     "ignore": [
       "firebase.json",
       "**/.*",
