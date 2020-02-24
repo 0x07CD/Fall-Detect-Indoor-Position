@@ -7,7 +7,6 @@ import {
 	InputGroup,
 	Card
 } from 'react-bootstrap';
-import firebase from '../firebase';
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function Login() {

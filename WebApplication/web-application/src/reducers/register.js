@@ -1,11 +1,10 @@
 /* register form management */
 
 const initialState = {
-    // value, error message, valid form, invalid form
     email: {
-        value: "",
-        errMsg: "",
-        valid: true
+        value: "",          // data in each form
+        errMsg: "",         // error message display when data is invalid
+        valid: true         // use to trigger animation validate form, true value are not animate
     },
     password: {
         value: "",
@@ -35,6 +34,15 @@ const initialState = {
 };
 
 const registerReducer = (state = initialState, action) => {
+    /* data structure
+    action = {
+        type: "UPDATE_VALUE" or "UPDATE_ERR_MSG" or "UPDATE_VALID",
+        payload: {
+            name: "key of the state to be update",
+            value: "new value"
+        }
+    }
+    */
     switch (action.type) {
         case "UPDATE_VALUE":
             const value_temp = { ...state[action.payload.name] }

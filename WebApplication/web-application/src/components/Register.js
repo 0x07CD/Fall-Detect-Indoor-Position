@@ -11,7 +11,6 @@ import {
 	InputGroup,
 	ButtonToolbar
 } from 'react-bootstrap';
-import firebase from '../firebase';
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function Register(props) {
@@ -19,8 +18,6 @@ function Register(props) {
 	const [isLoading, setIsLoading] = useState(false);
 	const history = useHistory();
 
-	const firstName_value = props.registerForm.firstName.value;
-	const lastName_value = props.registerForm.lastName.value;
 	const username_value = props.registerForm.username.value;
 	const email_value = props.registerForm.email.value;
 	const password_value = props.registerForm.password.value;
@@ -28,8 +25,6 @@ function Register(props) {
 
 	const form_data = [
 		props,
-		firstName_value,
-		lastName_value,
 		username_value,
 		email_value,
 		password_value,
@@ -51,59 +46,6 @@ function Register(props) {
 
 		// for disable input field and animate loading
 		setIsLoading(true);
-
-		// register with firebase auth api
-		firebase.auth().createUserWithEmailAndPassword(
-			email_value, password_value
-		).then(function () {
-			// for add user information to database
-			firebase.auth().signInWithEmailAndPassword(
-				email_value, password_value
-			).then(function () {
-				console.log("retrieve data");
-				firebase.firestore().collection("users").where(username_value, "==", true).get().then(function (snapshot) {
-					snapshot.forEach(function (doc) {
-						if (doc.id === username_value) {
-							props.updateErrMsg("username", "username is already in use");
-							setIsLoading(false);
-							return null;
-						}
-					});
-
-					console.log("setting data");
-					firebase.firestore().collection("users").doc(username_value).set({
-						firstName: firstName_value,
-						lastName: lastName_value,
-						email: email_value,
-						password: password_value
-					}).then(function () {
-						// is ok
-						firebase.auth().signOut().then(function () {
-							console.log("success");
-						}).catch(function (error) {
-							console.log("Error signing out: ", error.message);
-						});
-						setIsLoading(false);
-						history.push("/login");
-					}).catch(function (error) {
-						// add operation error
-						setIsLoading(false);
-						console.log("Error setting documents: ", error);
-					});
-				}).catch(function (error) {
-					setIsLoading(false);
-					console.log("Error getting documents: ", error);
-				});
-			}).catch(function (error) {
-				// sign in operation error
-				setIsLoading(false);
-				console.log("Error signing in: ", error.message);
-			});
-		}).catch(function (error) {
-			// create user error
-			setIsLoading(false);
-			props.updateErrMsg("Error creating account: ", error.massage);
-		});
 	};
 
 	// JSX
@@ -114,43 +56,6 @@ function Register(props) {
 					<Form onSubmit={onSubmit}>
 						<h4 align="center">Patients Surveillance System</h4>
 						<h5 align="center">Create account</h5>
-
-						<Form.Row>
-							{/* Name filed */}
-							<Form.Group as={Col} controlId="firstName_field">
-								<Form.Label>First Name</Form.Label>
-								<Form.Control
-									type="text"
-									name="firstName"
-									onChange={onChange}
-									disabled={isLoading}
-									isInvalid={!props.registerForm.firstName.valid}
-								/>
-								<Form.Text className={props.registerForm.firstName.valid ? "text-muted" : "text-danger"}>
-									{
-										props.registerForm.firstName.valid ?
-											"" : props.registerForm.firstName.errMsg
-									}
-								</Form.Text>
-							</Form.Group>
-
-							<Form.Group as={Col} controlId="lastName_field">
-								<Form.Label>Last Name</Form.Label>
-								<Form.Control
-									type="text"
-									name="lastName"
-									onChange={onChange}
-									disabled={isLoading}
-									isInvalid={!props.registerForm.lastName.valid}
-								/>
-								<Form.Text className={props.registerForm.lastName.valid ? "text-muted" : "text-danger"}>
-									{
-										props.registerForm.lastName.valid ?
-											"" : props.registerForm.lastName.errMsg
-									}
-								</Form.Text>
-							</Form.Group>
-						</Form.Row>
 
 						{/* username filed */}
 						<Form.Group controlId="username_reg_field">
@@ -268,14 +173,11 @@ function Register(props) {
 }
 
 function validateInput(inputType, inputData) {
-	const name_pattern = /^[a-zA-Z]{1,20}$/;
 	const username_pattern = /^[a-zA-Z0-9](_(?!(\.|_))|\.(?!(_|\.))|[a-zA-Z0-9]){4,18}[a-zA-Z0-9]$/;
 	const email_pattern = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
 	const password_pattern = /^[a-zA-Z0-9](_(?!(\.|_))|\.(?!(_|\.))|[a-zA-Z0-9]){4,18}$/;
 
 	switch (inputType) {
-		case "name":
-			return name_pattern.test(inputData);
 		case "username":
 			return username_pattern.test(inputData);
 		case "email":
@@ -288,34 +190,8 @@ function validateInput(inputType, inputData) {
 	}
 }
 
-function validateForm(props, firstName, lastName, username, email, password, confirmPassword) {
+function validateForm(props, username, email, password, confirmPassword) {
 	let errors = true;
-
-	// firstname field validate
-	if (firstName.length === 0 || !firstName) {
-		props.updateErrMsg("firstName", "enter first name");
-		props.updateValid("firstName", false);
-		errors = false;
-	} else if (!validateInput("name", firstName)) {
-		props.updateErrMsg("firstName", "first name must be contain only english letter");
-		props.updateValid("firstName", false);
-		errors = false;
-	} else {
-		props.updateValid("firstName", true);
-	}
-
-	// lastname field validate
-	if (lastName.length === 0 || !lastName) {
-		props.updateErrMsg("lastName", "enter last name");
-		props.updateValid("lastName", false);
-		errors = false;
-	} else if (!validateInput("name", lastName)) {
-		props.updateErrMsg("lastName", "last name must be contain only english letter");
-		props.updateValid("lastName", false);
-		errors = false;
-	} else {
-		props.updateValid("lastName", true);
-	}
 
 	// username field validate
 	if (username.length === 0 || !username) {
