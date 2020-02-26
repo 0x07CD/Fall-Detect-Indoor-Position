@@ -1,6 +1,11 @@
 /* createUser form management */
 
 const initialState = {
+    username: {
+        value: "",
+        errMsg: "",
+        valid: true
+    },
     email: {
         value: "",          // data in each form
         errMsg: "",         // error message display when data is invalid
@@ -16,21 +21,12 @@ const initialState = {
         errMsg: "",
         valid: true
     },
-    firstName: {
-        value: "",
-        errMsg: "",
-        valid: true
-    },
-    lastName: {
-        value: "",
-        errMsg: "",
-        valid: true
-    },
-    username: {
+    other: {
         value: "",
         errMsg: "",
         valid: true
     }
+
 };
 
 const createUserReducer = (state = initialState, action) => {

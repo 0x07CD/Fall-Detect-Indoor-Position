@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import { connect } from 'react-redux';
 import axios from 'axios';
-import { useHistory } from 'react-router-dom';
 import {
 	Col,
 	Card,
@@ -13,6 +13,7 @@ import {
 	ButtonToolbar
 } from 'react-bootstrap';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import validateForm from '../function/validateForm';
 
 function CreateUser(props) {
 	const [hidePassword, setHidePassword] = useState(true);
@@ -24,28 +25,75 @@ function CreateUser(props) {
 	const password_value = props.createUserForm.password.value;
 	const confirmPassword_value = props.createUserForm.confirmPassword.value;
 
-	const form_data = [
-		props,
-		username_value,
-		email_value,
-		password_value,
-		confirmPassword_value
-	];
+	const form_data = {
+		username: {
+			value: username_value,
+			required: true
+		},
+		email: {
+			value: email_value,
+			required: true
+		},
+		password: {
+			value: password_value,
+			required: true
+		},
+		confirmPassword: {
+			value: confirmPassword_value,
+			required: true
+		}
+	};
 
+	/*
 	useEffect(() => {
 		
 	});
+	*/
 
 	const onChange = (event) => {
 		event.preventDefault();
 		props.updateValue(event.target.name, event.target.value);
 	};
 
-	const onSubmit = (event) => {
+	const onSubmit = async (event) => {
 		event.preventDefault();
 
-		// validateForm() return false if data invalid 
-		if (!validateForm(...form_data)) {
+		const result = validateForm(form_data);
+		let valid = true;
+
+		if (!result.username.valid) {
+			props.updateErrMsg("username", result.username.err_msg);
+			props.updateValid("username", result.username.valid);
+			valid = false;
+		} else {
+			props.updateValid("username", result.username.valid);
+		}
+
+		if (!result.email.valid) {
+			props.updateErrMsg("email", result.email.err_msg);
+			props.updateValid("email", result.email.valid);
+			valid = false;
+		} else {
+			props.updateValid("email", result.email.valid);
+		}
+
+		if (!result.password.valid) {
+			props.updateErrMsg("password", result.password.err_msg);
+			props.updateValid("password", result.password.valid);
+			valid = false;
+		} else {
+			props.updateValid("password", result.password.valid);
+		}
+
+		if (!result.confirmPassword.valid) {
+			props.updateErrMsg("confirmPassword", result.confirmPassword.err_msg);
+			props.updateValid("confirmPassword", result.confirmPassword.valid);
+			valid = false;
+		} else {
+			props.updateValid("confirmPassword", result.confirmPassword.valid);
+		}
+
+		if (!valid) {
 			return null;
 		}
 
@@ -58,9 +106,21 @@ function CreateUser(props) {
 			password: password_value
 		};
 
-		axios.post("https://us-central1-ce62-29.cloudfunctions.net/createUser", body).then((res) => {
-			console.log(res.data);
+		const response = await axios.post("https://us-central1-ce62-29.cloudfunctions.net/api/createUser", body).then((res) => {
+			return res.data;
+		}).catch((error) => {
+			return {
+				massage: error
+			};
 		});
+
+		if (response.massage !== "successfully") {
+			props.updateErrMsg("other", "create account error, please try again");
+			props.updateValid("other", false);
+			return null;
+		}else{
+			props.updateValid("other", true);
+		}
 
 		setIsLoading(false);
 		history.push("sign_in");
@@ -68,7 +128,7 @@ function CreateUser(props) {
 
 	// JSX
 	return (
-		<Container style={{ paddingTop: '70px', maxWidth: '600px' } /*padding for prevent overlap others content from navigation bar*/}>
+		<Container style={{ paddingTop: "70px", maxWidth: "600px" } /*padding for prevent overlap others content from navigation bar*/}>
 			<Card>
 				<Card.Body>
 					<Form onSubmit={onSubmit}>
@@ -76,7 +136,7 @@ function CreateUser(props) {
 						<h5 align="center">Create account</h5>
 
 						{/* username filed */}
-						<Form.Group controlId="username_reg_field">
+						<Form.Group controlId="username_field">
 							<Form.Label>Username</Form.Label>
 							<Form.Control
 								type="text"
@@ -95,7 +155,7 @@ function CreateUser(props) {
 						</Form.Group>
 
 						{/* Email filed */}
-						<Form.Group controlId="email_reg_field">
+						<Form.Group controlId="email_field">
 							<Form.Label>Email</Form.Label>
 							<Form.Control
 								type="text"
@@ -115,7 +175,7 @@ function CreateUser(props) {
 
 						<Form.Row>
 							{/* Password filed */}
-							<Form.Group as={Col} controlId="password_reg_field">
+							<Form.Group as={Col} controlId="password_field">
 								<Form.Label>Password</Form.Label>
 								<Form.Control
 									type={hidePassword ? "password" : "text"}
@@ -134,7 +194,7 @@ function CreateUser(props) {
 							</Form.Group>
 
 							{/* Confirm filed */}
-							<Form.Group as={Col} controlId="confirm_reg_field">
+							<Form.Group as={Col} controlId="confirm_field">
 								<Form.Label>Confirm password</Form.Label>
 								<InputGroup>
 									<Form.Control
@@ -174,13 +234,20 @@ function CreateUser(props) {
 								<Button variant="primary" type="submit" disabled={isLoading}>
 									{
 										isLoading ?
-											<Spinner animation="border" role="status">
+											<Spinner animation="border" role="status" size="sm">
 												<span className="sr-only">Loading...</span>
 											</Spinner> :
 											"Next"
 									}
 								</Button>
 							</Form.Group>
+							<Form.Text className={props.createUserForm.other.valid ? "text-muted" : "text-danger"}>
+								{
+									props.createUserForm.other.valid ?
+										"" :
+										props.createUserForm.other.errMsg
+								}
+							</Form.Text>
 
 						</ButtonToolbar>
 					</Form>
@@ -188,82 +255,6 @@ function CreateUser(props) {
 			</Card>
 		</Container>
 	);
-}
-
-function validateInput(inputType, inputData) {
-	const username_pattern = /^[a-zA-Z0-9](_(?!(\.|_))|\.(?!(_|\.))|[a-zA-Z0-9]){4,18}[a-zA-Z0-9]$/;
-	const email_pattern = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
-	const password_pattern = /^[a-zA-Z0-9](_(?!(\.|_))|\.(?!(_|\.))|[a-zA-Z0-9]){4,18}$/;
-
-	switch (inputType) {
-		case "username":
-			return username_pattern.test(inputData);
-		case "email":
-			return email_pattern.test(inputData);
-		case "password":
-			return password_pattern.test(inputData);
-		default:
-			console.log("input type don't exist...");
-			return false;
-	}
-}
-
-function validateForm(props, username, email, password, confirmPassword) {
-	let errors = true;
-
-	// username field validate
-	if (username.length === 0 || !username) {
-		props.updateErrMsg("username", "enter username");
-		props.updateValid("username", false);
-		errors = false;
-	} else if (!validateInput("username", username)) {
-		props.updateErrMsg("username", "username must be 6-20 characters with contain alphanumeric, dot, underscore which first and last character must be an alphanumeric");
-		props.updateValid("username", false);
-		errors = false;
-	} else {
-		props.updateValid("username", true);
-	}
-
-	// email field validate
-	if (email.length === 0 || !email) {
-		props.updateErrMsg("email", "enter email");
-		props.updateValid("email", false);
-		errors = false;
-	} else if (!validateInput("email", email)) {
-		props.updateErrMsg("email", "email is invald");
-		props.updateValid("email", false);
-		errors = false;
-	} else {
-		props.updateValid("email", true);
-	}
-
-	// password field validate
-	if (password.length === 0 || !password) {
-		props.updateErrMsg("password", "enter password");
-		props.updateValid("password", false);
-		errors = false;
-	} else if (!validateInput("password", password)) {
-		props.updateErrMsg("password", "password must be 6-20 characters with contain alphanumeric, dot, underscore which first character must be an alphanumeric");
-		props.updateValid("password", false);
-		errors = false;
-	} else {
-		props.updateValid("password", true);
-	}
-
-	// confirm password field validate
-	if ((confirmPassword.length === 0 || !confirmPassword) && password.length > 0) {
-		props.updateErrMsg("confirmPassword", "please confirm password");
-		props.updateValid("confirmPassword", false);
-		errors = false;
-	} else if (password !== confirmPassword) {
-		props.updateErrMsg("confirmPassword", "those passwords don't match try again");
-		props.updateValid("confirmPassword", false);
-		errors = false;
-	} else {
-		props.updateValid("confirmPassword", true);
-	}
-
-	return errors;
 }
 
 const mapStateToProps = state => {
