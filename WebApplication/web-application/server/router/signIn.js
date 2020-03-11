@@ -6,19 +6,27 @@ module.exports = (app) => {
     app.post("/signIn", async (req, res) => {
         const idToken = req.body.token;
 
-        await admin.auth().verifyIdToken(idToken).then(async (decodedToken) => {
-            let uid = decodedToken.uid;
-            await admin.auth().getUser(uid).then((record) => {
-                res.json({
-                    massage: "passed"
-                });
-                return null;
-            }).catch((error) => {
-                res.json({
-                    error: error
-                });
+        const verify_token_check = await admin.auth().verifyIdToken(idToken).then(async (decodedToken) => {
+            return {
+                uid: decodedToken.uid
+            };
+
+        }).catch((error) => {
+            res.json({
+                error: error
+            });
+        });
+
+        if (!verify_token_check) {
+            return null;
+        }
+
+        await admin.auth().getUser(verify_token_check.uid).then(() => {
+            res.json({
+                massage: "passed"
             });
             return null;
+            
         }).catch((error) => {
             res.json({
                 error: error

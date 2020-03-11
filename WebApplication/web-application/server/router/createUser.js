@@ -85,16 +85,36 @@ module.exports = (app) =>{
         }
             
         // create user account with admin sdk
-        await admin.auth().createUser({
+        const create_account_check = await admin.auth().createUser({
             uid: value.username,
             email: value.email,
             password: value.password
         }).then((userRecord) => {
+            return {
+                username: userRecord.uid,
+                email: userRecord.email
+            };
+    
+        }).catch((error) => {
+            res.json({
+                error: error
+            });
+            return false;
+        });
+
+        if (!create_account_check) {
+            return null;
+        }
+
+        // add user information to firestore
+        await admin.firestore().collection("users").doc(create_account_check.username).set({
+            email: create_account_check.email
+        }).then(() => {
             res.json({
                 massage: "successfully"
             });
             return null;
-    
+
         }).catch((error) => {
             res.json({
                 error: error

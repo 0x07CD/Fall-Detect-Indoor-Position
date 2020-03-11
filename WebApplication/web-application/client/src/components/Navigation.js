@@ -8,7 +8,7 @@ import {
     NavLink
 } from 'react-router-dom';
 
-function Navigation() {
+function Navigation(props) {
     return (
         <Navbar expand="md" fixed="top" bg="dark" variant="dark">
             <NavLink className="navbar-brand" to="/">Patients Surveillance System</NavLink>
