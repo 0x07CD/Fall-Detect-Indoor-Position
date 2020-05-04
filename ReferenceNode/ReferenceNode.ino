@@ -1,161 +1,306 @@
-#include <BLEDevice.h>
-#include <BLEUtils.h>
+/* Include Library file */
+#include <WiFi.h>
+#include <EEPROM.h>
+#include <Arduino.h>
 #include <BLEScan.h>
-#include <BLE2902.h>
-#include <BLEServer.h>
-#include <BLEAdvertisedDevice.h>
-#include <KalmanFilter.h>
+#include <BLEDevice.h>
+#include <WiFiMulti.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include <SimpleKalmanFilter.h>
 
-// See the following for generating UUIDs:
-// https://www.uuidgenerator.net/
+/* Define */
+#define TX_POWER                            -64.734                 // find Distance Power with measurement RSSI between Reference and Wristband in 1 meter
+#define SCAN_TIME                           1                       // second
+#define EEPROM_SIZE                         128                     // bytes
+#define DEFAULT_LOCATION                    "location1"
+#define DEFAULT_MAX_USER                    2                       // maximum number of user (Wearable) in system
+#define DEFAULT_WIFI_SSID                   "ESP32-Test"
+#define DEFAULT_WIFI_PASSWORD               "fO7apcsdog"
+#define WRISTBAND1_MAC                      "80:7d:3a:c4:5e:b2"
+#define WRISTBAND2_MAC                      "80:7d:3a:c4:6a:96"
+#define FALL_DETECT_SERVICE_UUID            "f2ad493c-4abb-4f33-9e25-0417ea0d1daf"
+#define FALL_DETECT_CHARACTERISTIC_UUID     "bd663898-580e-411c-aa1c-65a839e176ec"
+#define UPDATE_POSITION_URL                 "https://us-central1-ce62-29.cloudfunctions.net/api/patients/position"
 
-// for Indoor Positioning Service
+/* Define Global Variable */
+BLEScan* bleScan;
+WiFiMulti WiFiMulti;
 /*
- * R1 = -71.1 dBm
- * R2 = -74.8 dBm
- */
-#define TX_POWER                -64.734         // find Distance Power with measurement RSSI between Reference and Wristband in 1 meter
-#define WRISTBAND1_MAC          "80:7d:3a:c4:5e:b2"
-#define IPS_SERVICE_UUID        "fa6d99a5-1b0d-417b-8c96-25de8bfc4435"
-#define IPS_CHARACTERISTIC_UUID "61207c9a-1a73-40fd-947c-ea1991601d4a"
+  SimpleKalmanFilter(e_mea, e_est, q);
+  e_mea: Measurement Uncertainty
+  e_est: Estimation Uncertainty
+  q: Process Noise
+*/
+SimpleKalmanFilter kf(2, 2, 0.1);
+TaskHandle_t scanTaskHandle;
+std::string deviceList[DEFAULT_MAX_USER];
+struct clientParameterStruct {
+  const char* mac_address;
+  int start_address;
+  int rssi;
+  bool resume_task;
+  bool fall;
+} clientParameter[DEFAULT_MAX_USER];
+byte state;
 
-const int scanTime = 1; // x seconds
+/*
+   EEPROM structure (1 byte peer address)
+   -----------------------------------------------------------
+    address |        data         |        description
+   -----------------------------------------------------------
+      0     |   operation mode    |       0 = BLE mode
+            |                     |       1 = WiFi mode
+   -----------------------------------------------------------
+      1     |   own MAC address   |         character
+      .     |         .           |             .
+      .     |         .           |             .
+      18    | terminate character |            '\0'
+   -----------------------------------------------------------
+      19    |  number of matching |          integer
+            |       device        |
+   -----------------------------------------------------------
+      20    |   matching device   |         character
+      .     |     MAC address     |             .
+      .     |         .           |             .
+   -----------------------------------------------------------
+      38    | terminate character |            '\0'
+   -----------------------------------------------------------
+      39    |   rssi of maching   |          integer
+            |       device        |
+      40    |     fall status     |          boolean
+   -----------------------------------------------------------
 
-BLEScan *pBLEScan;
-BLEServer *pServer;
-BLECharacteristic *pCharacteristic;
-KalmanFilter kf = KalmanFilter(0.01f, 2.0f, 1.0f, .0f, 1.0f);
-TaskHandle_t scan_beacon_task_handle;
-TaskHandle_t update_distance_task_handle;
-volatile float rssi_filter = 0;
-volatile float distance = 0;
-int wearable_rssi;
-uint8_t wearable_value[10];
-uint8_t wearable_nativeAddress[6];
+   Repeat from address 20 to 40 at the next address
+   If more than 1 matching device is found
+   Maximum size of EEPROM in eps32 is 512 byte
+   Our program uses 128 bytes
+   Define at EEPROM_SIZE
 
-void scanBeaconTask(void *pvParameters);
-void updateDistanceTask(void *pvParameters);
+*/
 
-class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
-    void onResult(BLEAdvertisedDevice advertisedDevice) {
-      // get address of found device
-      std::string wearable_address = advertisedDevice.getAddress().toString();
-      if (!strcmp(wearable_address.c_str(), WRISTBAND1_MAC)) {
-        // get rssi of found device
-        wearable_rssi = advertisedDevice.getRSSI();
-        memcpy(wearable_nativeAddress, advertisedDevice.getAddress().getNative(), 6);
+/* Prototype-Function */
+void scanTask(void*);
+void clientTask(void*);
+void updatePositiontTask(void*);
+bool isExists(std::string);
 
-        // Monitor
-        //Serial.printf("Advertised Device: %s and RSSI: ", wearable_address.c_str());
-        //Serial.printf("%d \n", wearable_rssi);
-
-        // distance = 10^(tx_power - rssi / 10 * n)
-        /*
-        rssi_filter = kf.filter(wearable_rssi);
-        Serial.println(wearable_rssi);
-        Serial.println(rssi_filter);
-        distance = pow(10, (TX_POWER - rssi_filter) / (10 * 2.5));
-        Serial.println(distance);
-        */
-      }
-    }
-};
-
+/* setup */
 void setup() {
   Serial.begin(115200);
-  //Serial.println("Start...");
+  EEPROM.begin(EEPROM_SIZE);
+  /* add list of wearable device address (MAC Address) */
+  deviceList[0] = WRISTBAND1_MAC;
+  deviceList[1] = WRISTBAND2_MAC;
+  state = EEPROM.read(0);
 
-  // Create the BLE Device
-  BLEDevice::init("Locator");
-  pBLEScan = BLEDevice::getScan();            // create new scan
-  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-  pBLEScan->setActiveScan(true);              // active scan uses more power, but get results faster
-  pBLEScan->setInterval(100);
-  pBLEScan->setWindow(99);                    // less or equal setInterval value
-
-  // Create the BLE Server
-  pServer = BLEDevice::createServer();
-
-  // Create the Indoor Positioning Service
-  //Serial.println("Create Indoor Positioning Service");
-  BLEService *ipsService = pServer->createService(IPS_SERVICE_UUID);
-  //Serial.print("Service UUID: ");
-  //Serial.println(ipsService->getUUID().toString().c_str());  //** invalid
-  pCharacteristic = ipsService->createCharacteristic(
-                      IPS_CHARACTERISTIC_UUID,
-                      BLECharacteristic::PROPERTY_READ   |
-                      BLECharacteristic::PROPERTY_WRITE  |
-                      BLECharacteristic::PROPERTY_NOTIFY |
-                      BLECharacteristic::PROPERTY_INDICATE
-                    );
-
-  pCharacteristic->setWriteProperty(false);
-
-  // Create a BLE Descriptor
-  pCharacteristic->addDescriptor(new BLE2902());
-
-  // Start the Indoor Positioning Service
-  ipsService->start();
-
-  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(IPS_SERVICE_UUID);
-  pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x00);  // set value to 0x00 to not advertise this parameter
-
-  // Start advertising
-  BLEDevice::startAdvertising();
-
-  // Create Task
-  xTaskCreate(scanBeaconTask, "Scan Beacon Task", 10000, NULL, 2, &scan_beacon_task_handle);
-  xTaskCreate(updateDistanceTask, "Update Distance Task", 10000, NULL, 1, &update_distance_task_handle);
-
+  Serial.println(state);
+  switch (state) {
+    case 0:                                 // ble mode
+      Serial.println("BLE Mode");
+      setupBLE();
+      xTaskCreate(scanTask, "Scan Task", 4000, NULL, 1, &scanTaskHandle);
+      break;
+    case 1:                                 // wifi mode
+      Serial.println("WiFi Mode");
+      setupWifi();
+      xTaskCreate(updatePositionTask, "Update Position Task", 8000, NULL, 1, NULL);
+      break;
+    default:                                // default with ble mode
+      Serial.println("BLE Mode");
+      setupBLE();
+      xTaskCreate(scanTask, "Scan Task", 4000, NULL, 1, &scanTaskHandle);
+      break;
+  }
+  vTaskSuspend(NULL);
+  vTaskDelete(NULL);
 }
 
+/* main loop */
 void loop() {
-
 }
 
-void scanBeaconTask(void *pvParameters) {
-  while(1){
-    BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
-    Serial.printf("find MAC Address: %s\n", WRISTBAND1_MAC);
-    Serial.print("Devices found: ");
-    Serial.println(foundDevices.getCount());
-    Serial.println("Scan done!");
-    pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+void scanTask(void*) {
+  /* start scan */
+  BLEScanResults results = bleScan->start(SCAN_TIME, false);
+  Serial.printf("Number of found device: %d\n", results.getCount());
+
+  int nod = 0;                // number of device
+  int startIndex = 20;
+
+  for (int i = 0; i < results.getCount(); i++) {
+    std::string address = results.getDevice(i).getAddress().toString();
+    Serial.printf("BLE Advertised Device found: %s\n", address.c_str());
+
+    std::string serviceData = results.getDevice(i).getServiceData();
+    Serial.printf("Service Data: %s\n", serviceData.c_str());
+
+    if (isExists(address)) {
+      int rssi = results.getDevice(i).getRSSI();
+      /* write mac address to eeprom */
+      write_String(startIndex, address.c_str());
+      Serial.printf("write address %s to eeprom\n", read_String(startIndex).c_str());
+      startIndex += (strlen(address.c_str()) + 1);
+      EEPROM.write(startIndex, rssi);
+      EEPROM.commit();
+      Serial.printf("write rssi %d to eeprom\n", (int8_t)EEPROM.read(startIndex));
+      startIndex++;
+
+      if (!strcmp(serviceData.c_str(), "Fall Detect !!!")) {
+        EEPROM.write(startIndex, 1);
+        EEPROM.commit();
+        Serial.printf("write fall status %d to eeprom\n", (int)EEPROM.read(startIndex));
+        startIndex++;
+      } else {
+        EEPROM.write(startIndex, 0);
+        EEPROM.commit();
+        Serial.printf("write fall status %d to eeprom\n", (int)EEPROM.read(startIndex));
+        startIndex++;
+      }
+
+      nod++;
+    }
   }
-  vTaskSuspend(NULL);
+
+  EEPROM.write(19, nod);       // write number of device in address 2
+
+  bleScan->clearResults();
+  bleScan->stop();
+
+  Serial.println("Prepare to change mode BLE -> WiFi...");
+  EEPROM.write(0, 1);                                             // switch mode to wifi mode
+  EEPROM.commit();
+
+  ESP.restart();
+  /* make sure */
+  vTaskDelete(NULL);
 }
 
-void updateDistanceTask(void *pvParameters) {
-  while(1){
-    
-    rssi_filter = kf.filter(wearable_rssi);
-    Serial.println(wearable_rssi);
-    Serial.println(rssi_filter);
-    distance = pow(10, (TX_POWER - rssi_filter) / (10 * 2.5));
-    Serial.println(distance);
-  
-    // setup characteristic value
-    // example address xx:xx:xx:xx:xx:xx
-    // save "xx" only don't save ':', Therefore collecting 6 bytes of data
-    // rssi is an integer, Therefore collecting 4 bytes of data
-    // total 10 byte
-    wearable_value[0] = wearable_nativeAddress[0];
-    wearable_value[1] = wearable_nativeAddress[1];
-    wearable_value[2] = wearable_nativeAddress[2];
-    wearable_value[3] = wearable_nativeAddress[3];
-    wearable_value[4] = wearable_nativeAddress[4];
-    wearable_value[5] = wearable_nativeAddress[5];
-    wearable_value[6] = (uint8_t)(int)distance;
-    wearable_value[7] = (uint8_t)((int)distance >> 8);
-    wearable_value[8] = (uint8_t)((int)distance >> 16);
-    wearable_value[9] = (uint8_t)((int)distance >> 24);
+void updatePositionTask(void*) {
+  int count = (int)EEPROM.read(19);
+  String ownAddress = read_String(1);
+  Serial.println(ownAddress.c_str());
 
-    pCharacteristic->setValue(wearable_value, 10);
-    pCharacteristic->notify();
-    vTaskDelay(250 / portTICK_PERIOD_MS);
+  if (count == 0) {
+    Serial.println("Prepare to change mode Wifi -> BLE...");
+    EEPROM.write(0, 0);              // switch mode to ble mode
+    EEPROM.commit();
+    ESP.restart();
   }
-  vTaskSuspend(NULL);
+
+  int startIndex = 20;
+
+  char buff[200];
+  StaticJsonDocument<200> payload;
+  payload["address"] = ownAddress.c_str();
+  payload["location"] = DEFAULT_LOCATION;
+  JsonArray wearableDevice = payload.createNestedArray("wearableDevice");
+
+  const char* url = "https://us-central1-ce62-29.cloudfunctions.net/api/monitoring/status";
+  for (int i = 0; i < count; i++) {
+    String address = read_String(startIndex);
+    JsonObject device = wearableDevice.createNestedObject();
+    device["address"] = address;
+    startIndex += (strlen(address.c_str()) + 1);
+    device["rssi"] = (int8_t)EEPROM.read(startIndex++);         // cast byte to integer 8 bit include nagative value
+    device["fall"] = (bool)EEPROM.read(startIndex++);           // cast byte to boolean 0 => false, 1 => true
+  }
+
+  serializeJson(payload, Serial);
+  serializeJson(payload, buff);
+  connectAPI(url, buff);
+  Serial.println("Prepare to change mode Wifi -> BLE...");
+  EEPROM.write(0, 0);              // switch mode to ble mode
+  EEPROM.commit();
+  ESP.restart();
+  /* make sure */
+  vTaskDelete(NULL);
+}
+
+void setupWifi() {
+  WiFiMulti.addAP(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASSWORD);
+  /* Wait for WiFi Connection */
+  Serial.println("Waiting for WiFi to connect...");
+  while (WiFiMulti.run() != WL_CONNECTED) {
+  }
+  Serial.println("Wifi Connected...");
+}
+
+void setupBLE() {
+  BLEDevice::init("Reference Node");
+  BLEAddress ownAddress = BLEDevice::getAddress();
+  // write own address to eeprom
+  write_String(1, ownAddress.toString().c_str());
+  bleScan = BLEDevice::getScan();            // create new scan
+  bleScan->setActiveScan(true);              // active scan uses more power, but get results faster
+  bleScan->setInterval(189);
+  bleScan->setWindow(29);                    // less or equal setInterval value
+}
+
+void connectAPI(const char* url, char* buff) {
+  /* connect to api */
+  if (WiFiMulti.run() == WL_CONNECTED) {
+    HTTPClient https;
+    Serial.println("[HTTPS] begin...");
+    if (https.begin(url)) {
+      Serial.printf("[HTTPS] POST... %s\n", url);
+      https.addHeader("Content-Type", "application/json");
+      int httpCode = https.POST(buff);
+      if (httpCode > 0) {
+        Serial.printf("[HTTPS] POST... code: %d\n", httpCode);
+
+        if (httpCode == HTTP_CODE_OK) {
+          const char* payload = https.getString().c_str();
+          Serial.printf("%s\n", payload);
+        }
+      } else {
+        Serial.printf("[HTTPS] PSOT... failed, error: %s\n", https.errorToString(httpCode).c_str());
+      }
+    } else {
+      Serial.println("[HTTPS] Unable to connect");
+    }
+    https.end();
+  } else {
+    Serial.println("Unable to create client");
+  }
+}
+
+bool isExists(std::string address) {
+  for (int i = 0; i < DEFAULT_MAX_USER; i++) {
+    //Serial.printf("%s compare %s \n", address.c_str(), deviceList[i].mac_address.c_str());
+    if (!strcmp(address.c_str(), deviceList[i].c_str())) {     // if equal strcmp return 0 or false
+      return true;
+    }
+  }
+  return false;
+}
+
+//float getDistance(int rssi, int txPower) {
+//  return pow(10, (txPower - rssi) / (10 * 2));
+//}
+
+String read_String(int address) {
+  int i;
+  char data[100];     // Max 18 bytes
+  int len = 0;
+  unsigned char k;
+  k = EEPROM.read(address);
+  while (k != '\0' && len < 500)  //Read until null character
+  {
+    k = EEPROM.read(address + len);
+    data[len] = k;
+    len++;
+  }
+  data[len] = '\0';
+  return String(data);
+}
+
+void write_String(int address, String data) {
+  int _size = data.length();
+  for (int i = 0; i < _size; i++)
+  {
+    EEPROM.write(address + i, data[i]);
+  }
+  EEPROM.write(address + _size, '\0'); //Add termination null character for String Data
+  EEPROM.commit();
 }

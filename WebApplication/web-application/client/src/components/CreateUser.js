@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import { connect } from 'react-redux';
 import axios from 'axios';
@@ -14,8 +14,11 @@ import {
 } from 'react-bootstrap';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import validateForm from '../function/validateForm';
+import SelectLocation from './SelectLocation';
 
 function CreateUser(props) {
+	const [initial, setInitial] = useState(true);
+	const [hideErrorSelectLocation, setHideErrorSelectLocation] = useState(true);
 	const [hidePassword, setHidePassword] = useState(true);
 	const [isLoading, setIsLoading] = useState(false);
 	const history = useHistory();
@@ -44,27 +47,23 @@ function CreateUser(props) {
 		}
 	};
 
-	/*
-	useEffect(() => {
-		
-	});
-	*/
-
 	const onChange = (event) => {
 		event.preventDefault();
 		props.updateValue(event.target.name, event.target.value);
 	};
 
-	const onSubmit = async (event) => {
+	const onSubmit = (event) => {
 		event.preventDefault();
+		props.updateValid("other", true);
+		setIsLoading(true);
 
 		const result = validateForm(form_data);
-		let valid = true;
 
 		if (!result.username.valid) {
 			props.updateErrMsg("username", result.username.err_msg);
 			props.updateValid("username", result.username.valid);
-			valid = false;
+			setIsLoading(false);
+			return;
 		} else {
 			props.updateValid("username", result.username.valid);
 		}
@@ -72,7 +71,8 @@ function CreateUser(props) {
 		if (!result.email.valid) {
 			props.updateErrMsg("email", result.email.err_msg);
 			props.updateValid("email", result.email.valid);
-			valid = false;
+			setIsLoading(false);
+			return;
 		} else {
 			props.updateValid("email", result.email.valid);
 		}
@@ -80,7 +80,8 @@ function CreateUser(props) {
 		if (!result.password.valid) {
 			props.updateErrMsg("password", result.password.err_msg);
 			props.updateValid("password", result.password.valid);
-			valid = false;
+			setIsLoading(false);
+			return;
 		} else {
 			props.updateValid("password", result.password.valid);
 		}
@@ -88,43 +89,63 @@ function CreateUser(props) {
 		if (!result.confirmPassword.valid) {
 			props.updateErrMsg("confirmPassword", result.confirmPassword.err_msg);
 			props.updateValid("confirmPassword", result.confirmPassword.valid);
-			valid = false;
+			setIsLoading(false);
+			return;
 		} else {
 			props.updateValid("confirmPassword", result.confirmPassword.valid);
 		}
 
-		if (!valid) {
-			return null;
+		if (props.selectLocationState.selectLocation === "Select location") {
+			setHideErrorSelectLocation(false);
+			setIsLoading(false);
+			return;
+		} else {
+			setHideErrorSelectLocation(true);
 		}
 
-		// for disable input field and animate loading
-		setIsLoading(true);
+		fetchData();
+	};
 
+	const fetchData = () => {
 		const body = {
 			username: username_value,
 			email: email_value,
-			password: password_value
+			password: password_value,
+			location: props.selectLocationState.selectLocation
 		};
 
-		const response = await axios.post("https://us-central1-ce62-29.cloudfunctions.net/api/createUser", body).then((res) => {
-			return res.data;
-		}).catch((error) => {
-			return {
-				massage: error
-			};
-		});
-
-		if (response.massage !== "successfully") {
-			props.updateErrMsg("other", "create account error, please try again");
+		axios.post("https://us-central1-ce62-29.cloudfunctions.net/api/createUser", body).then((res) => {
+			if (res.status === 200) {
+				console.log(res.data);
+				props.updateValid("other", true);
+				setIsLoading(false);
+				history.push("sign_in");
+			} else {
+				console.log(res.data);
+				props.updateErrMsg("other", "create account error, please try again");
+				props.updateValid("other", false);
+				setIsLoading(false);
+			}
+		}).catch((e) => {
+			props.updateErrMsg("other", e.message);
 			props.updateValid("other", false);
-			return null;
-		}else{
-			props.updateValid("other", true);
-		}
-
-		setIsLoading(false);
-		history.push("sign_in");
+			setIsLoading(false);
+		});
 	};
+
+	useEffect(() => {
+		if (initial) {
+			axios.get("https://us-central1-ce62-29.cloudfunctions.net/api/locations").then((res) => {
+				if (res.status === 200) {
+					props.setupLocation(res.data.locations);
+					console.log(res.data.locations);
+				}
+			}).catch((e) => {
+				console.log(e);
+			});
+			setInitial(false);
+		}
+	}, [initial, props]);
 
 	// JSX
 	return (
@@ -225,6 +246,19 @@ function CreateUser(props) {
 							</Form.Group>
 						</Form.Row>
 
+						<Form.Row>
+							<Form.Group as={Col} controlId="select_location_field">
+								<SelectLocation userLocation={false}/>
+								<Form.Text className={hideErrorSelectLocation ? "text-muted" : "text-danger"}>
+									{
+										hideErrorSelectLocation ?
+										"" :
+										"please select location to be tracked"
+									}
+								</Form.Text>
+							</Form.Group>
+						</Form.Row>
+
 						<ButtonToolbar className="justify-content-between">
 							{/* Sign In link */}
 							<Button variant="link" href="/sign_in" disabled={isLoading}>Sign in instead</Button>
@@ -241,6 +275,9 @@ function CreateUser(props) {
 									}
 								</Button>
 							</Form.Group>
+						</ButtonToolbar>
+
+						<Form.Row>
 							<Form.Text className={props.createUserForm.other.valid ? "text-muted" : "text-danger"}>
 								{
 									props.createUserForm.other.valid ?
@@ -248,8 +285,7 @@ function CreateUser(props) {
 										props.createUserForm.other.errMsg
 								}
 							</Form.Text>
-
-						</ButtonToolbar>
+						</Form.Row>
 					</Form>
 				</Card.Body>
 			</Card>
@@ -259,7 +295,8 @@ function CreateUser(props) {
 
 const mapStateToProps = state => {
 	return {
-		createUserForm: state.createUserReducer
+		createUserForm: state.createUserReducer,
+		selectLocationState: state.selectLocationReducer
 	};
 };
 
@@ -273,6 +310,12 @@ const mapDispatchToProps = dispatch => {
 		},
 		updateValid: (name_param, valid_param) => {
 			return dispatch({ type: "UPDATE_VALID", payload: { name: name_param, value: valid_param } })
+		},
+		setSelectLocation: (value_param) => {
+			return dispatch({ type: "SET_SELECT_LOCATION", payload: value_param });
+		},
+		setupLocation: (value_param) => {
+			return dispatch({ type: "SETUP_LOCATION", payload: value_param });
 		}
 	};
 };

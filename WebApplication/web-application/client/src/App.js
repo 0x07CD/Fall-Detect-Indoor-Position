@@ -1,7 +1,7 @@
 import React from 'react';
 import {
 	Route,
-	Switch,
+	Switch
 	// useLocation
 } from 'react-router-dom';
 import SignIn from './components/SignIn';

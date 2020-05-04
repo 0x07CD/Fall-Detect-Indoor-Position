@@ -18,6 +18,7 @@ import validateForm from '../function/validateForm';
 function SignIn(props) {
 	const [hidePassword, setHidePassword] = useState(true);
 	const [isLoading, setIsLoading] = useState(false);
+	//const [loading, setLoading] = useState(false);
 	const history = useHistory();
 
 	const email_value = props.signInForm.email.value;
@@ -39,19 +40,18 @@ function SignIn(props) {
 		props.updateValue(event.target.name, event.target.value);
 	};
 
-	const onSubmit = async (event) => {
+	const onSubmit = (event) => {
 		event.preventDefault();
-
-		// for disable input field and animate loading
+		props.updateValid("other", true);
 		setIsLoading(true);
 
 		const result = validateForm(form_data);
-		let valid = true;
 
 		if (!result.email.valid) {
 			props.updateErrMsg("email", result.email.err_msg);
 			props.updateValid("email", result.email.valid);
-			valid = false;
+			setIsLoading(false);
+			return;
 		} else {
 			props.updateValid("email", result.email.valid);
 		}
@@ -59,47 +59,49 @@ function SignIn(props) {
 		if (!result.password.valid) {
 			props.updateErrMsg("password", result.password.err_msg);
 			props.updateValid("password", result.password.valid);
-			valid = false;
+			setIsLoading(false);
+			return;
 		} else {
 			props.updateValid("password", result.password.valid);
 		}
 
-		if (!valid) {
-			return null;
-		}
-
-		const response = await firebase.auth().signInWithEmailAndPassword(email_value, password_value).then(async (userCredential) => {
-			await userCredential.user.getIdToken(true).then(async (token) => {
-				await axios.post("https://us-central1-ce62-29.cloudfunctions.net/api/signIn", { token: token }).then((res) => {
-					return res.data;
-				}).catch((error) => {
-					return {
-						massage: error
-					};
-				});
-			}).catch((error) => {
-				return {
-					massage: error
-				};
-			});
-		}).catch((error) => {
-			return {
-				massage: error
-			};
-		});
-
-		setIsLoading(false);
-
-		if (response.massage !== "passed") {
-			props.updateErrMsg("other", "sign in error, please try again");
-			props.updateValid("other", false);
-			return null;
-		}else{
-			props.updateValid("other", true);
-		}
-
-		history.push("monitoring");
+		fetctData();
 	}
+
+	// create user
+	const fetctData = () => {
+		firebase.auth().signInWithEmailAndPassword(email_value, password_value).then((userCredential) => {
+			userCredential.user.getIdToken(true).then((token) => {
+				axios.post("https://us-central1-ce62-29.cloudfunctions.net/api/signIn", { token: token }).then((res) => {
+					if (res.status === 200) {
+						props.updateValid("other", true);
+						props.signIn();
+						props.setUsername(res.data.username);
+						props.setLocation(res.data.location);
+						setIsLoading(false);
+						history.push("monitoring");
+					} else {
+						console.log(res.data);
+						props.updateErrMsg("other", "error, please try again");
+						props.updateValid("other", false);
+						setIsLoading(false);
+					}
+				}).catch((e) => {
+					props.updateErrMsg("other", e.message);
+					props.updateValid("other", false);
+					setIsLoading(false);
+				});
+			}).catch((e) => {
+				props.updateErrMsg("other", e.message);
+				props.updateValid("other", false);
+				setIsLoading(false);
+			});
+		}).catch((e) => {
+			props.updateErrMsg("other", e.message);
+			props.updateValid("other", false);
+			setIsLoading(false);
+		});
+	};
 
 	return (
 		<Container style={{ paddingTop: "70px", maxWidth: "600px" } /*padding for prevent overlap others content from navigation bar*/}>
@@ -174,16 +176,18 @@ function SignIn(props) {
 											"Next"
 									}
 								</Button>
-								<Form.Text className={props.signInForm.other.valid ? "text-muted" : "text-danger"}>
-									{
-										props.signInForm.other.valid ?
-											"" :
-											props.signInForm.other.errMsg
-									}
-								</Form.Text>
 							</Form.Group>
-
 						</ButtonToolbar>
+
+						<Form.Row>
+							<Form.Text className={props.signInForm.other.valid ? "text-muted" : "text-danger"}>
+								{
+									props.signInForm.other.valid ?
+										"" :
+										props.signInForm.other.errMsg
+								}
+							</Form.Text>
+						</Form.Row>
 					</Form>
 				</Card.Body>
 			</Card>
@@ -193,12 +197,22 @@ function SignIn(props) {
 
 const mapStateToProps = state => {
 	return {
+		userState: state.userReducer,
 		signInForm: state.signInReducer
 	};
 };
 
 const mapDispatchToProps = dispatch => {
 	return {
+		signIn: () => {
+			return dispatch({ type: "SIGN_IN" });
+		},
+		setUsername: (value_param) => {
+			return dispatch({ type: "SET_USERNAME", payload: value_param });
+		},
+		setLocation: (value_param) => {
+			return dispatch({ type: "SET_LOCATION", payload: value_param });
+		},
 		updateValue: (name_param, value_param) => {
 			return dispatch({ type: "UPDATE_VALUE", payload: { name: name_param, value: value_param } })
 		},

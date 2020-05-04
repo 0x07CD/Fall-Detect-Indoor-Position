@@ -5,34 +5,39 @@ const admin = require('../firebase/firebaseConfig');
 module.exports = (app) => {
     app.post("/signIn", async (req, res) => {
         const idToken = req.body.token;
+        const db = admin.firestore().collection("users");
 
-        const verify_token_check = await admin.auth().verifyIdToken(idToken).then(async (decodedToken) => {
-            return {
-                uid: decodedToken.uid
-            };
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(idToken);
+            try {
+                const userRecord = await admin.auth().getUser(decodedToken.uid);
+                try {
+                    const doc = await db.doc(userRecord.uid).get();
+                    res.status(200);
+                    res.json({
+                        username: userRecord.uid,
+                        location: doc.data().locations
+                    });
+                } catch (e) {
+                    res.status(400);
+                    res.json({
+                        error: e
+                    });
+                }
 
-        }).catch((error) => {
+            } catch (e) {
+                res.status(400);
+                res.json({
+                    error: e
+                });
+            }
+
+        } catch (e) {
+            res.status(400);
             res.json({
-                error: error
+                error: e
             });
-        });
-
-        if (!verify_token_check) {
-            return null;
         }
 
-        await admin.auth().getUser(verify_token_check.uid).then(() => {
-            res.json({
-                massage: "passed"
-            });
-            return null;
-            
-        }).catch((error) => {
-            res.json({
-                error: error
-            });
-        });
-
-        return null;
     });
 };
