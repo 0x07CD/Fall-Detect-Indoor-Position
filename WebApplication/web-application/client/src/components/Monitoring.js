@@ -16,7 +16,7 @@ function Monitoring(props) {
     const [url, setUrl] = useState(null);
     const history = useHistory();
     const VIRTUAL_WIDTH = 800;
-    const VIRTUAL_HEIGHT = 640;
+    const VIRTUAL_HEIGHT = 500;
     const scaleX = (width / VIRTUAL_WIDTH) > 1 ? 1 : (width / VIRTUAL_WIDTH);
     const scaleY = (height / VIRTUAL_HEIGHT) > 1 ? 1 : (height / VIRTUAL_HEIGHT);
 
@@ -58,16 +58,20 @@ function Monitoring(props) {
         <Container>
             <Navigation />
             <Container style={{ paddingTop: "70px", paddingBottom: "70px" }}>
-                <Card className="text-center">
+                <Card className="text-center" bg="dark" border="info" style={{ height: `${VIRTUAL_HEIGHT}px` }}>
+                    <Card.Header>
+                        <SelectLocation userLocation={true} />
+                    </Card.Header>
                     <Card.Body>
-                        <SelectLocation userLocation={true}/>
-                        <Stage width={width} height={height} scaleX={scaleX} scaleY={scaleX}>
+                        <Stage>
                             <Layer>
-                                <Map x={300} y={100} width={VIRTUAL_WIDTH} height={VIRTUAL_HEIGHT} scaleX={scaleX} scaleY={scaleY} url={url} />
+                                <Map scaleX={scaleX} scaleY={scaleY} url={url} />
                             </Layer>
                         </Stage>
-                        <SelectLocation />
                     </Card.Body>
+                    <Card.Footer>
+                        <SelectLocation userLocation={true} />
+                    </Card.Footer>
                 </Card>
             </Container>
         </Container>
@@ -79,8 +83,6 @@ const Map = (props) => {
 
     return <Image
         image={image}
-        x={props.x * props.scaleX}
-        y={props.y * props.scaleY}
         scalex={props.scaleX}
         scaleY={props.scaleX}
     />;

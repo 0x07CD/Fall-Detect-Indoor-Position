@@ -3,7 +3,7 @@
 const initialState = {
     username: null,
 	isSignedIn: false,
-	location: null
+	locations: null
 };
 
 const userReducer = (state = initialState, action) => {
@@ -26,7 +26,7 @@ const userReducer = (state = initialState, action) => {
 		case "SET_LOCATION":
 			return {
 				...state,
-				location: action.payload
+				locations: action.payload
 			}
 		default:
 			return state

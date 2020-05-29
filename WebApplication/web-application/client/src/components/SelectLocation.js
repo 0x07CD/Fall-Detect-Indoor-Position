@@ -6,7 +6,7 @@ import { connect } from 'react-redux';
 
 function SelectLocation(props) {
     const [select, setSelect] = useState(props.selectLocationState.selectLocation);
-    const [location, setLocation] = useState(null);
+    const [locations, setLocations] = useState(null);
 
     const handleSelect = (eventKey) => {
         props.setSelectLocation(eventKey);
@@ -19,17 +19,17 @@ function SelectLocation(props) {
 
     useEffect(() => {
         if (props.userLocation) {
-            setLocation(props.userState.location);
+            setLocations(props.userState.locations);
         } else {
-            setLocation(props.selectLocationState.location);
+            setLocations(props.selectLocationState.locations);
         }
-    }, [props.userLocation, props.userState.location, props.selectLocationState.location]);
+    }, [props.userLocation, props.userState.locations, props.selectLocationState.locations]);
 
     return (
-        <DropdownButton id="select_location_btn" variant="outline-primary" title={select}>
+        <DropdownButton id="select_location_btn" variant="outline-info" title={select}>
             {
-                location ?
-                    location.map((locationName, index) =>
+                locations ?
+                    locations.map((locationName, index) =>
                         <Dropdown.Item key={index} eventKey={locationName} onSelect={handleSelect}>
                             {locationName}
                         </Dropdown.Item>

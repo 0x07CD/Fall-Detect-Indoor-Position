@@ -2,7 +2,7 @@
 
 const initialState = {
 	selectLocation: "Select location",
-	location: []
+	locations: null
 };
 
 const SelectLocationReducer = (state = initialState, action) => {
@@ -15,7 +15,7 @@ const SelectLocationReducer = (state = initialState, action) => {
 		case "SETUP_LOCATION":
 			return {
 				...state,
-				location: action.payload
+				locations: action.payload
 			};
 		default:
 			return state

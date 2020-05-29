@@ -4,25 +4,22 @@ const admin = require('../firebase/firebaseConfig');
 
 module.exports = (app) => {
     app.get("/locations", async (req, res) => {
-        const results = await admin.firestore().collection("locations").get().then((snapShot) => {
+        await admin.firestore().collection("locations").get().then((snapShot) => {
             let data = {
                 locations: []
             };
 
             snapShot.forEach((doc) => {
                 let temp = [...data.locations];
-                data.locations = [...temp, doc.id];
+                data.locations = [...temp, doc.data().locationInfo.name];
             });
 
-            res.status(200);
-            res.json(data);
+            res.status(200).json(data);
             return;
 
         }).catch((e) => {
-            res.status(400);
-            res.send(e);
+            res.status(400).send(e.message);
         });
-
 
     });
 };

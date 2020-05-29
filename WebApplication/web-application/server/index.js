@@ -25,13 +25,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 require('./router/users')(app);
-require('./router/signIn')(app);
 require('./router/locations')(app);
 require('./router/monitoring')(app);
-require('./router/createUser')(app);
 
 app.get("/test", (req, res) => {
-    res.send("OK");
+    res.status(200).send("OK");
 });
 
 exports.updatePosition = functions.firestore.document("monitoring/{locationName}").onWrite((change, context) => {
@@ -40,7 +38,7 @@ exports.updatePosition = functions.firestore.document("monitoring/{locationName}
         let keys = Object.keys(dataUpdated);
 
         // To ensure that reference node are changed more than or equal to 3
-        
+
     } catch (e) {
         console.log(e);
     }

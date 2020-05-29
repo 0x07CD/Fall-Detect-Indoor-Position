@@ -63,15 +63,15 @@ byte state;
       20    |   matching device   |         character
       .     |     MAC address     |             .
       .     |         .           |             .
+      .     |         .           |             .
+      37    | terminate character |            '\0'
    -----------------------------------------------------------
-      38    | terminate character |            '\0'
-   -----------------------------------------------------------
-      39    |   rssi of maching   |          integer
+      38    |   rssi of maching   |          integer
             |       device        |
-      40    |     fall status     |          boolean
+      39    |     fall status     |          boolean
    -----------------------------------------------------------
 
-   Repeat from address 20 to 40 at the next address
+   Repeat from address 20 to 39 at the next address
    If more than 1 matching device is found
    Maximum size of EEPROM in eps32 is 512 byte
    Our program uses 128 bytes
@@ -149,14 +149,13 @@ void scanTask(void*) {
       if (!strcmp(serviceData.c_str(), "Fall Detect !!!")) {
         EEPROM.write(startIndex, 1);
         EEPROM.commit();
-        Serial.printf("write fall status %d to eeprom\n", (int)EEPROM.read(startIndex));
         startIndex++;
       } else {
         EEPROM.write(startIndex, 0);
         EEPROM.commit();
-        Serial.printf("write fall status %d to eeprom\n", (int)EEPROM.read(startIndex));
         startIndex++;
       }
+      Serial.printf("write fall status %d to eeprom\n", (int)EEPROM.read(startIndex));
 
       nod++;
     }
@@ -267,7 +266,6 @@ void connectAPI(const char* url, char* buff) {
 
 bool isExists(std::string address) {
   for (int i = 0; i < DEFAULT_MAX_USER; i++) {
-    //Serial.printf("%s compare %s \n", address.c_str(), deviceList[i].mac_address.c_str());
     if (!strcmp(address.c_str(), deviceList[i].c_str())) {     // if equal strcmp return 0 or false
       return true;
     }

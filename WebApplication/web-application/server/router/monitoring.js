@@ -14,8 +14,7 @@ module.exports = (app) => {
                 }
             });
 
-            res.status(200);
-            res.send("success");
+            res.status(200).send("success");
         } catch (e) {
             res.status(400);
         }
@@ -29,8 +28,7 @@ module.exports = (app) => {
                 db.update({
                     rssi: data.wearableDevice[0].rssi
                 });
-                res.status(200);
-                res.send("success");
+                res.status(200).send("success");
             } catch (e) {
                 res.status(400);
             }

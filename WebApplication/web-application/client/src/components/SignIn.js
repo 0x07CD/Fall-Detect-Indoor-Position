@@ -68,16 +68,16 @@ function SignIn(props) {
 		fetctData();
 	}
 
-	// create user
+	// sign in
 	const fetctData = () => {
 		firebase.auth().signInWithEmailAndPassword(email_value, password_value).then((userCredential) => {
 			userCredential.user.getIdToken(true).then((token) => {
-				axios.post("https://us-central1-ce62-29.cloudfunctions.net/api/signIn", { token: token }).then((res) => {
+				axios.post("https://us-central1-ce62-29.cloudfunctions.net/api/users/signIn", { token: token }).then((res) => {
 					if (res.status === 200) {
 						props.updateValid("other", true);
 						props.signIn();
 						props.setUsername(res.data.username);
-						props.setLocation(res.data.location);
+						props.setLocation(res.data.locations);
 						setIsLoading(false);
 						history.push("monitoring");
 					} else {
@@ -87,7 +87,8 @@ function SignIn(props) {
 						setIsLoading(false);
 					}
 				}).catch((e) => {
-					props.updateErrMsg("other", e.message);
+					// axios response
+					props.updateErrMsg("other", e.response.data.message);
 					props.updateValid("other", false);
 					setIsLoading(false);
 				});
@@ -167,7 +168,7 @@ function SignIn(props) {
 
 							{/* Submit button */}
 							<Form.Group>
-								<Button variant="primary" type="submit" disabled={isLoading}>
+								<Button variant="info" type="submit" disabled={isLoading}>
 									{
 										isLoading ?
 											<Spinner animation="border" role="status" size="sm">

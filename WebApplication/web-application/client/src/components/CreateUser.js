@@ -114,7 +114,7 @@ function CreateUser(props) {
 			location: props.selectLocationState.selectLocation
 		};
 
-		axios.post("https://us-central1-ce62-29.cloudfunctions.net/api/createUser", body).then((res) => {
+		axios.post("https://us-central1-ce62-29.cloudfunctions.net/api/users/createUser", body).then((res) => {
 			if (res.status === 200) {
 				console.log(res.data);
 				props.updateValid("other", true);
@@ -127,7 +127,7 @@ function CreateUser(props) {
 				setIsLoading(false);
 			}
 		}).catch((e) => {
-			props.updateErrMsg("other", e.message);
+			props.updateErrMsg("other", e.response.data.message);
 			props.updateValid("other", false);
 			setIsLoading(false);
 		});
@@ -265,7 +265,7 @@ function CreateUser(props) {
 
 							<Form.Group>
 								{/* Submit button */}
-								<Button variant="primary" type="submit" disabled={isLoading}>
+								<Button variant="info" type="submit" disabled={isLoading}>
 									{
 										isLoading ?
 											<Spinner animation="border" role="status" size="sm">
