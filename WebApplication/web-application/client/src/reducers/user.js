@@ -1,6 +1,7 @@
 /* user management */
 
 const initialState = {
+	id: null,
     username: null,
 	isSignedIn: false,
 	locations: null
@@ -27,6 +28,11 @@ const userReducer = (state = initialState, action) => {
 			return {
 				...state,
 				locations: action.payload
+			}
+		case "SET_ID":
+			return {
+				...state,
+				id: action.payload
 			}
 		default:
 			return state

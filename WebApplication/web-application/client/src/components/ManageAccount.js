@@ -4,7 +4,7 @@ import {
 } from 'react-bootstrap';
 import { connect } from 'react-redux';
 import { useHistory } from 'react-router-dom';
-// import * as serviceWorker from '../serviceWorker';
+import * as serviceWorker from '../serviceWorker';
 import Navigation from './Navigation';
 
 function ManageAccount(props) {
@@ -12,7 +12,25 @@ function ManageAccount(props) {
 
     useEffect(() => {
         if (Notification.permission === "default") {
-            Notification.requestPermission();
+            Notification.requestPermission().then((result) => {
+                if (result === "granted") {
+                    if ("serviceWorker" in navigator) {
+                        const applicationServerKey = serviceWorker.urlB64ToUint8Array("BOQ4-GDtCdX8OB3sb_6R3NpagwxVuUWFelVysbvunzysL_tL0L-nCIo-FRxMdLddi01RSY7TgJ9ZbkfWrKR6p7M");
+                        const options = {
+                            applicationServerKey,
+                            userVisibleOnly: true
+                        };
+
+                        navigator.serviceWorker.ready.then((reg) => {
+                            reg.pushManager.subscribe(options).then(async (subscription) => {
+                                const response = await serviceWorker.saveSubscription(props.userState.id, JSON.stringify(subscription));
+                                console.log(response);
+                            });
+
+                        });
+                    }
+                }
+            });
         }
     });
 

@@ -10,7 +10,7 @@ const isLocalhost = Boolean(
 	)
 )
 
-const urlB64ToUint8Array = base64String => {
+export const urlB64ToUint8Array = (base64String) => {
 	const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
 	const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
 	const rawData = atob(base64);
@@ -21,9 +21,9 @@ const urlB64ToUint8Array = base64String => {
 	return outputArray;
 }
 
-const saveSubscription = async (subscription) => {
+export const saveSubscription = async (id, subscription) => {
 	let SERVER_URL = 'https://us-central1-ce62-29.cloudfunctions.net/api/users/saveSubscription';
-	let response = await axios.post(SERVER_URL, { subscription: subscription });
+	let response = await axios.post(SERVER_URL, { id: id, subscription: subscription });
 	return response;
 }
 
@@ -41,6 +41,20 @@ const saveSubscription = async (subscription) => {
 // 		console.log(err);
 // 	}
 // });
+
+/* eslint-disable-next-line no-restricted-globals */
+/* self.addEventListener('push', (event) => {
+	if (event.data) {
+		const options = {
+			body: event.data.text()
+		};
+
+		self.registration.showNotification("Fall Detected", options);
+		console.log("push event data: ", event.data.text());
+	} else {
+		console.log("push event but no data");
+	}
+}); */
 
 export const register = (config) => {
 	if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
@@ -61,21 +75,23 @@ export const register = (config) => {
 			} else {
 				// Is not localhost. Just register service worker
 				try {
-					const applicationServerKey = urlB64ToUint8Array("BOQ4-GDtCdX8OB3sb_6R3NpagwxVuUWFelVysbvunzysL_tL0L-nCIo-FRxMdLddi01RSY7TgJ9ZbkfWrKR6p7M");
-					const options = {
-						applicationServerKey,
-						userVisibleOnly: true
-					};
 					const registration = await registerValidSW(swUrl, config);
+
+					registration.addEventListener('push', (event) => {
+						if (event.data) {
+							const options = {
+								body: event.data.text()
+							};
+							event.waitUntil(
+								registration.showNotification("Fall Detected", options)
+							);
+							console.log("push event data: ", event.data.text());
+						} else {
+							console.log("push event but no data");
+						}
+					});
+
 					console.log(registration);
-
-					if (Notification.permission === "granted") {
-						/* eslint-disable-next-line no-restricted-globals */
-						const subscription = await registration.pushManager.subscribe(options);
-						const response = await saveSubscription(JSON.stringify(subscription));
-						console.log(response);
-					}
-
 				} catch (error) {
 					console.log(error);
 				}

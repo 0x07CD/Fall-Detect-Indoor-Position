@@ -5,15 +5,14 @@ const admin = require('../firebase/firebaseConfig');
 module.exports = (app) => {
     app.post("/monitoring/status", async (req, res) => {
         const data = req.body;
-        const requestReferenceNodeAddress = data.address;                                            // requestReferenceNodeAddress is request reference node mac address
+        const requestReferenceNodeAddress = data.address;        // requestReferenceNodeAddress is request reference node mac address
         const db = admin.firestore().collection("monitoring");
         try {
+            console.log("updating...");
             await db.doc(data.location).update({
-                [requestReferenceNodeAddress]: {
-                    wearableDevice: data.wearableDevic
-                }
+                wearableDevice: data.wearableDevice
             });
-
+            console.log("update complete...");
             res.status(200).send("success");
         } catch (e) {
             res.status(400);

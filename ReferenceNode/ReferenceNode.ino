@@ -207,6 +207,7 @@ void updatePositionTask(void*) {
 
   serializeJson(payload, Serial);
   serializeJson(payload, buff);
+  Serial.println();
   connectAPI(url, buff);
   Serial.println("Prepare to change mode Wifi -> BLE...");
   EEPROM.write(0, 0);              // switch mode to ble mode
@@ -253,7 +254,7 @@ void connectAPI(const char* url, char* buff) {
           Serial.printf("%s\n", payload);
         }
       } else {
-        Serial.printf("[HTTPS] PSOT... failed, error: %s\n", https.errorToString(httpCode).c_str());
+        Serial.printf("[HTTPS] POST... failed, error: %s\n", https.errorToString(httpCode).c_str());
       }
     } else {
       Serial.println("[HTTPS] Unable to connect");

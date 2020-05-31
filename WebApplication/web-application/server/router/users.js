@@ -1,8 +1,6 @@
 'use strict'
 
 const admin = require('../firebase/firebaseConfig');
-const vapidKeys = require('../vapidKeys');
-const webpush = require('web-push');
 const joi = require('@hapi/joi');
 
 // regular expression
@@ -129,6 +127,7 @@ module.exports = (app) => {
                     if (!snapshot.empty) {
                         snapshot.forEach((doc) => {
                             res.status(200).json({
+                                id: doc.id,
                                 username: userRecord.uid,
                                 locations: doc.data().locations
                             });
@@ -190,11 +189,11 @@ module.exports = (app) => {
     });
 
     app.post("/users/saveSubscription", async (req, res) => {
-        const subscription = req.body;
-        const saveToDatabase = async (subscription) => {
-            admin.firestore().collection("")
-        }
-        await admin.firestore().collection("users").doc()
+        const payload = req.body;
+        await admin.firestore().collection("users").doc(payload.id).update({
+            subscription: JSON.parse(payload.subscription)    
+        });
+
         res.status(200).json({ message: 'success' });
     });
 };

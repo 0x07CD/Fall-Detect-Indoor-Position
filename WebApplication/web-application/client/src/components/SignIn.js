@@ -76,6 +76,7 @@ function SignIn(props) {
 					if (res.status === 200) {
 						props.updateValid("other", true);
 						props.signIn();
+						props.setId(res.data.id);
 						props.setUsername(res.data.username);
 						props.setLocation(res.data.locations);
 						setIsLoading(false);
@@ -207,6 +208,9 @@ const mapDispatchToProps = dispatch => {
 	return {
 		signIn: () => {
 			return dispatch({ type: "SIGN_IN" });
+		},
+		setId: (value_param) => {
+			return dispatch({ type: "SET_ID", payload: value_param });
 		},
 		setUsername: (value_param) => {
 			return dispatch({ type: "SET_USERNAME", payload: value_param });

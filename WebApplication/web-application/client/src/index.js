@@ -9,7 +9,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 
 import App from './App';
 import configureStore from './configureStore';
-// import * as serviceWorker from './serviceWorker';
+import * as serviceWorker from './serviceWorker';
 
 const { store, persistor } = configureStore();
 
@@ -25,4 +25,4 @@ const MyApp = () => (
 
 ReactDOM.render(<MyApp />, document.getElementById('root'));
 
-// serviceWorker.register();
+serviceWorker.register();
